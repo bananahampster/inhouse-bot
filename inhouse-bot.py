@@ -213,7 +213,7 @@ async def lockmap(ctx):
 
         # get top maps
         mapTally = [(pickedMap, len(votes)) for (pickedMap, votes) in mapVotes.items()]
-        sameVotes = sorted(mapTally, key=lambda e: e[0], reverse=True)
+        sameVotes = sorted(mapTally, key=lambda e: e[1], reverse=True)
 
         highestVote = sameVotes[0][1]
         sameVotes = [pickedMap for (pickedMap, votes) in sameVotes if votes == highestVote ]
