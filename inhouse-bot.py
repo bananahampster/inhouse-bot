@@ -20,7 +20,6 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 
 msgList = []
 playerList = {}
-msg = " "
 pickupActive = 0
 mapchoice1 = None
 mapChoice2 = None
@@ -41,19 +40,10 @@ pickNum = 1
 
 # @debounce(2)
 async def printPlayerList(ctx):
-    global msgList
     global playerList
-    global msg
-    # msgList = []
-    # for i in range(len(playerList)):
-    #     msgList.append(playerList[i])
-
-    # msg = ''.join(msgList)
-    # return msg
 
     msg =  ", ".join([s for s in playerList.values()])
-    await ctx.send("```\nPlayers\n" + msg + "```")
-    return msg
+    await ctx.send("```\nPlayers (" + str(len(playerList)) + "/8)\n" + msg + "```")
 
 def DePopulatePickup():
     global pickupActive
@@ -61,7 +51,6 @@ def DePopulatePickup():
     global mapVote
     global msgList
     global eList
-    global msg
     global playerList
     global blueTeam
     global redTeam
@@ -82,7 +71,6 @@ def DePopulatePickup():
     blueTeam = []
     redTeam = []
     playerList = {}
-    msg = None
     mapSelected = []
     mapVotes = {}
 
@@ -121,6 +109,7 @@ async def pickup(ctx):
     global mapList
 
     if pickupActive == 0 and mapVote == 0 and mapsPicked == 0 and pickNum == 1:
+        pickupActive = 1
 
         with open('maplist.json') as f:
             mapList = json.load(f)
@@ -130,19 +119,12 @@ async def pickup(ctx):
         await asyncio.sleep(5)
         await ctx.send("!add in 5 seconds")
         await asyncio.sleep(5)
-        await ctx.send("!add enabled")
 
-        pickupActive = 1
-
-        await printPlayerList(ctx)
-
-@client.command(pass_context=True)
-async def packup(ctx):
-    await ctx.send("Where's that fucking Hampster?  I swear I'm gonna pack that rodent up... 🐹")
-
-@client.command(pass_context=True)
-async def doug(ctx):
-    await ctx.send("DougTCK was a professional team fortress classic player from 2000-2007 helping lead teams to hold all three major league titles. Doug stepped away from gaming all together for almost a decade, he is back playing team fortress classic and now Apex Legends")
+        if pickupActive == 1:
+            await ctx.send("!add enabled")
+            await printPlayerList(ctx)
+        else:
+            await ctx.send("Pickup was canceled before countdown finished 🤨")
 
 @client.command(pass_context=True)
 async def cancel(ctx):
@@ -167,8 +149,8 @@ async def add(ctx, player: discord.Member=None):
     global mapVotes
     global mapVote
 
-    if player is None:
-        player = ctx.author
+    # if player is None:
+    player = ctx.author
 
     if(pickupActive == 1):
 
@@ -204,13 +186,20 @@ async def add(ctx, player: discord.Member=None):
 async def remove(ctx):
     global playerList
     global pickupActive
-    global msg
 
     if(pickupActive == 1):
         if ctx.author.id in playerList:
             del playerList[ctx.author.id]
 
             await printPlayerList(ctx)
+
+@client.command(pass_context=True)
+async def teams(ctx):
+    await printPlayerList(ctx)
+
+@client.command(pass_context=True)
+async def teamz(ctx):
+    await ctx.send("```\nPlayers\nnuki, nuki, nuki, nuki, nuki, nuki, nuki, nuki```")
 
 @client.event
 async def on_reaction_add(reaction, user):
@@ -396,6 +385,19 @@ async def lockmap(ctx):
 #             rMsg = ' '.join(rTeamMsgList)
 
 #             await tMsg.edit(content= "```\n" + pMsg + "\n\n" + bMsg + "\n\n" + rMsg + "```")
+
+
+@client.command(pass_context=True)
+async def packup(ctx):
+    await ctx.send("Where's that fucking Hampster?  I swear I'm gonna pack that rodent up... 🐹")
+
+@client.command(pass_context=True)
+async def doug(ctx):
+    await ctx.send("Doug was a semi-professional Team Fortress Classic Player between 2000 and 2007 achieving co-leading The Cereal Killers to holding all three major league titles at the same time. Doug left gaming for almost a decade and now he's back, streaming old Team Fortress Classic and Fortnite games.")
+
+@client.command(pass_context=True)
+async def akw(ctx):
+    await ctx.send("akw likes butts 🍑")
 
 @client.event
 async def on_ready():
