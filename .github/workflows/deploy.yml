@@ -30,6 +30,8 @@ jobs:
         username: ${{ secrets.DEPLOY_USER }}
         password: ${{ secrets.DEPLOY_PASSWORD }}
         script: |
+          export NVM_DIR=~/.nvm
+          source ~/.nvm/nvm.sh
           cd ~/inhouse-bot
           git reset --hard main
           git pull origin main
