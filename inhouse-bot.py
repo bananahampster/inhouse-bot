@@ -6,6 +6,8 @@ import json
 import os
 import random
 
+from collections import deque
+from discord import player
 from dotenv import load_dotenv
 from discord.ext import commands
 from discord.utils import get
@@ -17,6 +19,15 @@ client.remove_command('help')
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+
+# on load, load previous teams + map from the prev* files
+with open('prevmaps.json', 'r') as f:
+    previousMaps = deque(json.load(f), maxlen=4)
+
+with open('prevteams.json', 'r') as f:
+    previousTeam = json.load(f)
+
+mapList = []
 
 msgList = []
 playerList = {}
@@ -50,7 +61,6 @@ def DePopulatePickup():
     global mapsPicked
     global mapVote
     global msgList
-    global eList
     global playerList
     global blueTeam
     global redTeam
@@ -67,7 +77,6 @@ def DePopulatePickup():
     mapsPicked = 0
     pickupActive = 0
     msgList = []
-    eList = []
     blueTeam = []
     redTeam = []
     playerList = {}
@@ -97,22 +106,34 @@ def PickMaps():
     mapList.remove(mapname)
     mapVotes[mapChoice3] = []
 
+def RecordMapAndTeams(winningMap):
+    global previousMaps
+    global playerList
+    global previousTeam
+
+    previousMaps.append(winningMap)
+    with open('prevmaps.json', 'w') as f:
+        json.dump(list(previousMaps), f)
+
+    previousTeam = list(playerList.values())
+    with open('prevteams.json', 'w') as f:
+        json.dump(previousTeam, f)
+
 @client.command(pass_context=True)
 async def pickup(ctx):
     global pickupActive
     global mapVote
     global mapsPicked
-    global mapChoice1
-    global mapChoice2
-    global mapChoice3
-    global mapChoice4
     global mapList
+    global previousMaps
 
     if pickupActive == 0 and mapVote == 0 and mapsPicked == 0 and pickNum == 1:
         pickupActive = 1
 
         with open('maplist.json') as f:
             mapList = json.load(f)
+            for prevMap in previousMaps:
+                mapList.remove(prevMap)
 
         DePopulatePickup
         await ctx.send("Pickup started. !add in 10 seconds")
@@ -152,8 +173,7 @@ async def add(ctx, player: discord.Member=None):
     # if player is None:
     player = ctx.author
 
-    if(pickupActive == 1):
-
+    if pickupActive == 1:
         playerId = player.id
         playerName = player.display_name
         if playerId not in playerList:
@@ -161,7 +181,7 @@ async def add(ctx, player: discord.Member=None):
 
             await printPlayerList(ctx)
 
-    if(len(playerList) >= 4):
+    if len(playerList) >= 1:
         # ensure that playerlist is first 8 people added
         playerList = dict(list(playerList.items())[:8])
 
@@ -169,6 +189,7 @@ async def add(ctx, player: discord.Member=None):
         PickMaps()
         mapChoice4 = "New Maps"
         mapVotes[mapChoice4] = []
+
         vMsg = await ctx.send("```Vote for your map!  When vote is stable, !lockmap\n\n"
                                 + "1️⃣ " + mapChoice1 + " " * (30 - len(mapChoice1)) + str(len(mapVotes[mapChoice1])) + " Votes\n"
                                 + "2️⃣ " + mapChoice2 + " " * (30 - len(mapChoice2)) + str(len(mapVotes[mapChoice2])) + " Votes\n"
@@ -190,16 +211,11 @@ async def remove(ctx):
     if(pickupActive == 1):
         if ctx.author.id in playerList:
             del playerList[ctx.author.id]
-
             await printPlayerList(ctx)
 
 @client.command(pass_context=True)
 async def teams(ctx):
     await printPlayerList(ctx)
-
-@client.command(pass_context=True)
-async def teamz(ctx):
-    await ctx.send("```\nPlayers\nnuki, nuki, nuki, nuki, nuki, nuki, nuki, nuki```")
 
 @client.event
 async def on_reaction_add(reaction, user):
@@ -208,7 +224,7 @@ async def on_reaction_add(reaction, user):
     global alreadyVoted
     global mapVotes
     #print(reaction.author.display_name)
-    if((reaction.message.channel.name == "inhouse") and (mapVote == 1) and (user.display_name != "inhouse-bot")):
+    if((reaction.message.channel.name == "inhouse-bot-test") and (mapVote == 1) and (user.display_name != "inhouse-bot")):
         if((reaction.emoji == '1️⃣') or (reaction.emoji == '2️⃣') or (reaction.emoji == '3️⃣') or (reaction.emoji == '4️⃣')):
             if(user.id in playerList):
                 for i in list(mapVotes):
@@ -222,13 +238,12 @@ async def on_reaction_add(reaction, user):
                     mapVotes[mapChoice3].append(user.id)
                 if(reaction.emoji == '4️⃣'):
                     mapVotes[mapChoice4].append(user.id)
-                await vMsg.edit(content="```Vote for your map!  Be quick, you only have 30 seconds to vote..\n\n"
+                await vMsg.edit(content="```Vote for your map!  When vote is stable, !lockmap\n\n"
                                 + "1️⃣ " + mapChoice1 + " " * (30 - len(mapChoice1)) + str(len(mapVotes[mapChoice1])) + " Votes\n"
                                 + "2️⃣ " + mapChoice2 + " " * (30 - len(mapChoice2)) + str(len(mapVotes[mapChoice2])) + " Votes\n"
                                 + "3️⃣ " + mapChoice3 + " " * (30 - len(mapChoice3)) + str(len(mapVotes[mapChoice3])) + " Votes\n"
                                 + "4️⃣ " + mapChoice4 + " " * (30 - len(mapChoice4)) + str(len(mapVotes[mapChoice4])) + " Votes```")
-            # else:
-            #     await reaction.message.channel.send("Youre not in the pickup sir.")
+
 
 @client.command(pass_context=True)
 async def lockmap(ctx):
@@ -244,8 +259,9 @@ async def lockmap(ctx):
     global tMsg
     global blueTeam
     global redTeam
+    global previousMaps
+
     rankedVotes = []
-    ordered = []
     highestVote = 0
     winningMap = " "
 
@@ -277,115 +293,14 @@ async def lockmap(ctx):
         else:
             await ctx.send("The winning map is: " + winningMap)
             await ctx.send("🎉🎉 JOIN INHOUSE YA HOSERS 🎉🎉")
+            await ctx.send("steam://connect/104.153.105.235:27015/kawk")
+            RecordMapAndTeams(winningMap)
             DePopulatePickup()
 
-            # await ctx.send("If you want, assign captains to begin the team picking process in Discord with `!cap @cap1 @cap2`")
-            # mapVote = 0
-            # mapsPicked = 1
 
-            # # if not captaining, consider pickup closed
-            # await asyncio.sleep(30)
-            # if len(blueTeam) == 0 or len(redTeam) == 0:
-            #     DePopulatePickup()
-
-# @client.command(pass_context=True)
-# async def cap(ctx, cap1: discord.Member, cap2: discord.Member):
-#     global tMsg
-#     global mapsPicked
-#     global captains
-#     if(mapsPicked == 1):
-#         if(cap1.display_name in playerList.values()):
-#             blueTeam.append(cap1.display_name)
-#             captains.append(cap1.display_name)
-#             del playerList[cap1.id]
-#         if(cap2.display_name in playerList.values()):
-#             redTeam.append(cap2.display_name)
-#             captains.append(cap2.display_name)
-#             del playerList[cap2.id]
-
-#         pMsgList = ["Player List: "]
-#         bTeamMsgList = ["Blue Team: "]
-#         rTeamMsgList = ["Red Team: "]
-
-#         for i in playerList.values():
-#             pMsgList.append(i + "\n")
-
-#         for i in blueTeam:
-#             bTeamMsgList.append(i + "\n")
-
-#         for i in redTeam:
-#             rTeamMsgList.append(i + "\n")
-
-#         pMsg = ' '.join(pMsgList)
-#         bMsg = ' '.join(bTeamMsgList)
-#         rMsg = ' '.join(rTeamMsgList)
-
-#         tMsg = await ctx.send("```\n" + pMsg + "\n\n" + bMsg + "\n\n" + rMsg + "```")
-
-# @client.command(pass_context=True)
-# async def pick(ctx, name: discord.Member):
-#     global blueTeam
-#     global redTeam
-#     global tMsg
-#     global playerList
-#     global pickNum
-#     playerName = name.display_name
-#     playerId = name.id
-#     captain = ctx.author.display_name
-#     if captain in captains:
-#         if captain in blueTeam:
-#             if((pickNum == 1) or (pickNum == 3) or (pickNum == 6)):
-#                 del playerList[playerId]
-#                 blueTeam.append(playerName)
-#                 pickNum += 1
-
-#         if captain in redTeam:
-#             if((pickNum == 2) or (pickNum == 4) or (pickNum == 5) or (pickNum == 7)):
-#                 del playerList[playerId]
-#                 redTeam.append(playerName)
-#                 pickNum += 1
-
-#         if(len(playerList) == 1):
-#             blueTeam.append(playerList[0])
-#             playerList = {}
-
-#             bTeamMsgList = ["Blue Team: "]
-#             rTeamMsgList = ["Red Team: "]
-
-#             for i in blueTeam:
-#                 bTeamMsgList.append(i + " ")
-
-#             for i in redTeam:
-#                 rTeamMsgList.append(i + " ")
-
-#             bMsg = ' '.join(bTeamMsgList)
-#             rMsg = ' '.join(rTeamMsgList)
-#             await ctx.send("Here are the teams...")
-#             await ctx.send("```\n" + bMsg + "\n\n" + rMsg + "```")
-
-#             DePopulatePickup()
-
-
-#         if(len(playerList) > 1):
-#             pMsgList = ["Player List: "]
-#             bTeamMsgList = ["Blue Team: "]
-#             rTeamMsgList = ["Red Team: "]
-
-#             for i in playerList:
-#                 pMsgList.append(i + " ")
-
-#             for i in blueTeam:
-#                 bTeamMsgList.append(i + " ")
-
-#             for i in redTeam:
-#                 rTeamMsgList.append(i + " ")
-
-#             pMsg = ' '.join(pMsgList)
-#             bMsg = ' '.join(bTeamMsgList)
-#             rMsg = ' '.join(rTeamMsgList)
-
-#             await tMsg.edit(content= "```\n" + pMsg + "\n\n" + bMsg + "\n\n" + rMsg + "```")
-
+@client.command(pass_context=True)
+async def teamz(ctx):
+    await ctx.send("```\nPlayers (8/8)\nnuki, nuki, nuki, nuki, nuki, nuki, nuki, nuki```")
 
 @client.command(pass_context=True)
 async def packup(ctx):
