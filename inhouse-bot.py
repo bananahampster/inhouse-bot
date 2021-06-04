@@ -5,6 +5,7 @@ import discord
 import json
 import os
 import random
+import socket
 
 from collections import deque
 from discord import player
@@ -13,6 +14,7 @@ from discord.ext import commands
 from discord.utils import get
 
 from debounce import debounce
+from serverComms import InhouseServerProtocol
 
 client = commands.Bot(command_prefix = "!", case_insensitive=True)
 client.remove_command('help')
@@ -48,6 +50,21 @@ ordered = []
 mapsPicked = 0
 captains = []
 pickNum = 1
+
+
+## deal with socket stuffz
+loop = asyncio.get_event_loop()
+listen = loop.create_datagram_endpoint(InhouseServerProtocol, local_addr=('127.0.0.1', 16353))
+transport, protocol = loop.run_until_complete(listen)
+
+try:
+    loop.run_forever()
+except KeyboardInterrupt:
+    pass
+
+transport.close()
+loop.close()
+
 
 # @debounce(2)
 async def printPlayerList(ctx):
