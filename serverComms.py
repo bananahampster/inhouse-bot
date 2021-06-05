@@ -5,7 +5,7 @@ import json
 
 async def start_udp_listener():
     loop = asyncio.get_event_loop()
-    return await loop.create_datagram_endpoint(lambda: InhouseServerProtocol(), local_addr=('127.0.0.1', 16353))
+    return await loop.create_datagram_endpoint(lambda: InhouseServerProtocol(), local_addr=('0.0.0.0', 16353))
 
 def main_watcher():
     loop = asyncio.get_event_loop()
