@@ -306,7 +306,7 @@ async def lockmap(ctx):
 async def stats(ctx):
     with open('prevlog.json', 'r') as f:
         prevlog = json.load(f)
-        ctx.send('Stats: %s' % prevlog['site'])
+        await ctx.send('Stats: %s' % prevlog['site'])
 
 @client.command(pass_context=True)
 async def hltv(ctx):
