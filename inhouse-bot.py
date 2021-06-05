@@ -23,6 +23,7 @@ client.remove_command('help')
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+CHANNEL_NAME = os.getenv('DISCORD_CHANNEL')
 
 # on load, load previous teams + map from the prev* files
 with open('prevmaps.json', 'r') as f:
@@ -186,7 +187,7 @@ async def add(ctx, player: discord.Member=None):
 
             await printPlayerList(ctx)
 
-    if len(playerList) >= 1:
+    if len(playerList) >= 8:
         # ensure that playerlist is first 8 people added
         playerList = dict(list(playerList.items())[:8])
 
@@ -229,7 +230,7 @@ async def on_reaction_add(reaction, user):
     global alreadyVoted
     global mapVotes
     #print(reaction.author.display_name)
-    if((reaction.message.channel.name == "inhouse-bot-test") and (mapVote == 1) and (user.display_name != "inhouse-bot")):
+    if((reaction.message.channel.name == CHANNEL_NAME) and (mapVote == 1) and (user.display_name != "inhouse-bot")):
         if((reaction.emoji == '1️⃣') or (reaction.emoji == '2️⃣') or (reaction.emoji == '3️⃣') or (reaction.emoji == '4️⃣')):
             if(user.id in playerList):
                 for i in list(mapVotes):
@@ -300,6 +301,12 @@ async def lockmap(ctx):
             await ctx.send("steam://connect/104.153.105.235:27015/kawk")
             RecordMapAndTeams(winningMap)
             DePopulatePickup()
+
+@client.command(pass_context=True)
+async def stats(ctx):
+    with open('prevlog.json', 'r') as f:
+        prevlog = json.load(f)
+        ctx.send('Stats: %s' % prevlog['site'])
 
 @client.command(pass_context=True)
 async def hltv(ctx):
