@@ -61,7 +61,7 @@ class InhouseServerProtocol:
 
 
     def send_message(self, msg_type, message, addr):
-        data = f"BOT_MSG@{msg_type}@{message}".encode()
+        data = ("BOT_MSG@%s@%s" % (msg_type, message)).encode()
         self.transport.sendto(data, (addr[0], 16354))  # bot only listens on this port
 
 if __name__ == "__main__":
