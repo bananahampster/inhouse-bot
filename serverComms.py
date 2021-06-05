@@ -36,10 +36,10 @@ class InhouseServerProtocol:
             with open('prevteams.json', 'r') as f:
                 prevteams = json.load(f)
 
-                self.send_message("TEAMS", prevteams[:4].join(','), addr)
-                self.send_message("TEAMS", prevteams[4:].join(','), addr)
+                self.send_message("TEAMS", ', '.join(prevteams[:4]), addr)
+                self.send_message("TEAMS", ', '.join(prevteams[4:]), addr)
 
 
     def send_message(self, msg_type, message, addr):
-        data = "BOT_MSG@%s@%s".format(msg_type, message).encode()
-        self.transport.sendto(data, addr)
+        data = f"BOT_MSG@{msg_type}@{message}".encode()
+        self.transport.sendto(data, (addr[0], 16354))  # bot only listens on this port

@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import asyncio
+import threading
 import discord
 import json
 import os
@@ -9,6 +10,7 @@ import socket
 
 from collections import deque
 from discord import player
+from discord.flags import PublicUserFlags
 from dotenv import load_dotenv
 from discord.ext import commands
 from discord.utils import get
@@ -53,18 +55,55 @@ pickNum = 1
 
 
 ## deal with socket stuffz
-loop = asyncio.get_event_loop()
-listen = loop.create_datagram_endpoint(InhouseServerProtocol, local_addr=('127.0.0.1', 16353))
-transport, protocol = loop.run_until_complete(listen)
+# def background_loop(loop):
+#     listen = loop.create_datagram_endpoint(InhouseServerProtocol, local_addr=('127.0.0.1', 16353))
+#     transport, protocol = loop.run_until_complete(listen)
 
-try:
-    loop.run_forever()
-except KeyboardInterrupt:
-    pass
+#     try:
+#         loop.run_forever()
+#     except KeyboardInterrupt:
+#         pass
 
-transport.close()
-loop.close()
+#     transport.close()
+#     loop.close()
 
+# loop = asyncio.new_event_loop()
+# t = threading.Thread(target=background_loop, args=(loop, ))
+# t.start()
+
+# async def main_watcher():
+#     loop = asyncio.get_running_loop()
+#     transport, protocol = await loop.create_datagram_endpoint(lambda: InhouseServerProtocol(), local_addr=('127.0.0.1', 16353))
+
+#     try:
+#         await loop.run_forever()
+#     except KeyboardInterrupt:
+#         pass
+#     finally:
+#         transport.close()
+
+
+# asyncio.run(main_watcher())
+
+
+async def start_udp_listener():
+    loop = asyncio.get_event_loop()
+    return await loop.create_datagram_endpoint(lambda: InhouseServerProtocol(), local_addr=('127.0.0.1', 16353))
+
+def main_watcher():
+    loop = asyncio.get_event_loop()
+    coro = start_udp_listener()
+    transport, _ = loop.run_until_complete(coro)
+
+    try:
+        loop.run_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        transport.close()
+        loop.close()
+
+main_watcher()
 
 # @debounce(2)
 async def printPlayerList(ctx):
