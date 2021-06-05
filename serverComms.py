@@ -3,6 +3,26 @@
 import asyncio
 import json
 
+async def start_udp_listener():
+    loop = asyncio.get_event_loop()
+    return await loop.create_datagram_endpoint(lambda: InhouseServerProtocol(), local_addr=('127.0.0.1', 16353))
+
+def main_watcher():
+    loop = asyncio.get_event_loop()
+    coro = start_udp_listener()
+    transport, _ = loop.run_until_complete(coro)
+
+    try:
+        loop.run_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        transport.close()
+        loop.close()
+
+def main():
+    main_watcher()
+
 class InhouseServerProtocol:
     def connection_made(self, transport):
         self.transport = transport
@@ -43,3 +63,6 @@ class InhouseServerProtocol:
     def send_message(self, msg_type, message, addr):
         data = f"BOT_MSG@{msg_type}@{message}".encode()
         self.transport.sendto(data, (addr[0], 16354))  # bot only listens on this port
+
+if __name__ == "__main__":
+    main()

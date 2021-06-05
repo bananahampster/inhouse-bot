@@ -36,4 +36,5 @@ jobs:
           git reset --hard main
           git pull origin main
           pm2 restart inhouse-bot --update-env
+          pm2 restart inhouse-comms --update-env
 

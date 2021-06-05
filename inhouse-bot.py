@@ -26,7 +26,7 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 
 # on load, load previous teams + map from the prev* files
 with open('prevmaps.json', 'r') as f:
-    previousMaps = deque(json.load(f), maxlen=4)
+    previousMaps = deque(json.load(f), maxlen=3)
 
 with open('prevteams.json', 'r') as f:
     previousTeam = json.load(f)
@@ -47,63 +47,10 @@ redTeam = []
 alreadyVoted = []
 vMsg = None
 mapVote = 0
-tmsg = None
 ordered = []
 mapsPicked = 0
 captains = []
 pickNum = 1
-
-
-## deal with socket stuffz
-# def background_loop(loop):
-#     listen = loop.create_datagram_endpoint(InhouseServerProtocol, local_addr=('127.0.0.1', 16353))
-#     transport, protocol = loop.run_until_complete(listen)
-
-#     try:
-#         loop.run_forever()
-#     except KeyboardInterrupt:
-#         pass
-
-#     transport.close()
-#     loop.close()
-
-# loop = asyncio.new_event_loop()
-# t = threading.Thread(target=background_loop, args=(loop, ))
-# t.start()
-
-# async def main_watcher():
-#     loop = asyncio.get_running_loop()
-#     transport, protocol = await loop.create_datagram_endpoint(lambda: InhouseServerProtocol(), local_addr=('127.0.0.1', 16353))
-
-#     try:
-#         await loop.run_forever()
-#     except KeyboardInterrupt:
-#         pass
-#     finally:
-#         transport.close()
-
-
-# asyncio.run(main_watcher())
-
-
-async def start_udp_listener():
-    loop = asyncio.get_event_loop()
-    return await loop.create_datagram_endpoint(lambda: InhouseServerProtocol(), local_addr=('127.0.0.1', 16353))
-
-def main_watcher():
-    loop = asyncio.get_event_loop()
-    coro = start_udp_listener()
-    transport, _ = loop.run_until_complete(coro)
-
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        transport.close()
-        loop.close()
-
-main_watcher()
 
 # @debounce(2)
 async def printPlayerList(ctx):
@@ -205,6 +152,8 @@ async def pickup(ctx):
 
 @client.command(pass_context=True)
 async def cancel(ctx):
+    global mapVote
+
     if pickupActive == 1:
         await ctx.send("Pickup canceled.")
         DePopulatePickup()
@@ -312,7 +261,6 @@ async def lockmap(ctx):
     global mapVote
     global vMsg
     global mapList
-    global tMsg
     global blueTeam
     global redTeam
     global previousMaps
@@ -353,6 +301,17 @@ async def lockmap(ctx):
             RecordMapAndTeams(winningMap)
             DePopulatePickup()
 
+@client.command(pass_context=True)
+async def hltv(ctx):
+    await ctx.send("HLTV: http://inhouse.site.nfoservers.com/HLTV/akw/")
+
+@client.command(pass_context=True)
+async def logs(ctx):
+    await ctx.send("Logs: http://inhouse.site.nfoservers.com/akw/")
+
+@client.command(pass_context=True)
+async def sever(ctx):
+    await ctx.send("steam://connect/104.153.105.235:27015/kawk")
 
 @client.command(pass_context=True)
 async def teamz(ctx):
