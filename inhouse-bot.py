@@ -312,10 +312,12 @@ async def lockmap(ctx):
             await vMsg.add_reaction("3️⃣")
             await vMsg.add_reaction("4️⃣")
         else:
+            mapVote = 0
+            RecordMapAndTeams(winningMap)
+
             await ctx.send("The winning map is: " + winningMap)
             await ctx.send("🎉🎉 JOIN INHOUSE YA HOSERS 🎉🎉")
             await ctx.send("steam://connect/104.153.105.235:27015/kawk")
-            RecordMapAndTeams(winningMap)
             DePopulatePickup()
 
 @client.command(pass_context=True)
