@@ -36,6 +36,7 @@ mapList = []
 
 msgList = []
 playerList = {}
+pickupStarted = 0
 pickupActive = 0
 mapchoice1 = None
 mapChoice2 = None
@@ -61,6 +62,7 @@ async def printPlayerList(ctx):
     await ctx.send("```\nPlayers (" + str(len(playerList)) + "/8)\n" + msg + "```")
 
 def DePopulatePickup():
+    global pickupStarted
     global pickupActive
     global mapsPicked
     global mapVote
@@ -79,6 +81,7 @@ def DePopulatePickup():
     captains = []
     mapVote = 0
     mapsPicked = 0
+    pickupStarted = 0
     pickupActive = 0
     msgList = []
     blueTeam = []
@@ -125,27 +128,29 @@ def RecordMapAndTeams(winningMap):
 
 @client.command(pass_context=True)
 async def pickup(ctx):
+    global pickupStarted
     global pickupActive
     global mapVote
     global mapsPicked
     global mapList
     global previousMaps
 
-    if pickupActive == 0 and mapVote == 0 and mapsPicked == 0 and pickNum == 1:
-        pickupActive = 1
-
+    if pickupStarted == 0 and pickupActive == 0 and mapVote == 0 and mapsPicked == 0 and pickNum == 1:
         with open('maplist.json') as f:
             mapList = json.load(f)
             for prevMap in previousMaps:
                 mapList.remove(prevMap)
 
         DePopulatePickup
+
+        pickupStarted = 1
         await ctx.send("Pickup started. !add in 10 seconds")
         await asyncio.sleep(5)
         await ctx.send("!add in 5 seconds")
         await asyncio.sleep(5)
 
-        if pickupActive == 1:
+        if pickupStarted == 1:
+            pickupActive = 1
             await ctx.send("!add enabled")
             await printPlayerList(ctx)
         else:
@@ -153,14 +158,19 @@ async def pickup(ctx):
 
 @client.command(pass_context=True)
 async def cancel(ctx):
+    global pickupStarted
+    global pickupActive
     global mapVote
 
-    if pickupActive == 1:
-        await ctx.send("Pickup canceled.")
-        DePopulatePickup()
-    elif mapVote != 0:
+    if mapVote != 0:
         await ctx.send("You're still picking maps, still wanna cancel?")
         mapVote = 0
+        return
+    if pickupStarted == 1 or pickupActive == 1:
+        pickupStarted = 0
+        pickupActive = 0
+        await ctx.send("Pickup canceled.")
+        DePopulatePickup()
     else:
         await ctx.send("No pickup active.")
 
@@ -208,6 +218,10 @@ async def add(ctx, player: discord.Member=None):
         await vMsg.add_reaction("4️⃣")
 
         mapVote = 1
+
+        # for playerId in playerList.keys():
+        #     user = await client.get_user(playerId)
+        #     await client.send
 
 @client.command(pass_context=True)
 async def remove(ctx):
