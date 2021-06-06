@@ -195,33 +195,35 @@ async def add(ctx, player: discord.Member=None):
         if playerId not in playerList:
             playerList[playerId] = playerName
 
+        if len(playerList) < 8:
+            await printPlayerList(ctx)
+        else:
+            pickupActive = 0
             await printPlayerList(ctx)
 
-    if len(playerList) >= 8:
-        # ensure that playerlist is first 8 people added
-        playerList = dict(list(playerList.items())[:8])
+            # ensure that playerlist is first 8 people added
+            playerList = dict(list(playerList.items())[:8])
 
-        pickupActive = 0
-        PickMaps()
-        mapChoice4 = "New Maps"
-        mapVotes[mapChoice4] = []
+            PickMaps()
+            mapChoice4 = "New Maps"
+            mapVotes[mapChoice4] = []
 
-        vMsg = await ctx.send("```Vote for your map!  When vote is stable, !lockmap\n\n"
-                                + "1️⃣ " + mapChoice1 + " " * (30 - len(mapChoice1)) + str(len(mapVotes[mapChoice1])) + " Votes\n"
-                                + "2️⃣ " + mapChoice2 + " " * (30 - len(mapChoice2)) + str(len(mapVotes[mapChoice2])) + " Votes\n"
-                                + "3️⃣ " + mapChoice3 + " " * (30 - len(mapChoice3)) + str(len(mapVotes[mapChoice3])) + " Votes\n"
-                                + "4️⃣ " + mapChoice4 + " " * (30 - len(mapChoice4)) + str(len(mapVotes[mapChoice4])) + " Votes```")
+            vMsg = await ctx.send("```Vote for your map!  When vote is stable, !lockmap\n\n"
+                                    + "1️⃣ " + mapChoice1 + " " * (30 - len(mapChoice1)) + str(len(mapVotes[mapChoice1])) + " Votes\n"
+                                    + "2️⃣ " + mapChoice2 + " " * (30 - len(mapChoice2)) + str(len(mapVotes[mapChoice2])) + " Votes\n"
+                                    + "3️⃣ " + mapChoice3 + " " * (30 - len(mapChoice3)) + str(len(mapVotes[mapChoice3])) + " Votes\n"
+                                    + "4️⃣ " + mapChoice4 + " " * (30 - len(mapChoice4)) + str(len(mapVotes[mapChoice4])) + " Votes```")
 
-        await vMsg.add_reaction("1️⃣")
-        await vMsg.add_reaction("2️⃣")
-        await vMsg.add_reaction("3️⃣")
-        await vMsg.add_reaction("4️⃣")
+            await vMsg.add_reaction("1️⃣")
+            await vMsg.add_reaction("2️⃣")
+            await vMsg.add_reaction("3️⃣")
+            await vMsg.add_reaction("4️⃣")
 
-        mapVote = 1
+            mapVote = 1
 
-        # for playerId in playerList.keys():
-        #     user = await client.get_user(playerId)
-        #     await client.send
+            # for playerId in playerList.keys():
+            #     user = await client.get_user(playerId)
+            #     await client.send
 
 @client.command(pass_context=True)
 async def remove(ctx):
