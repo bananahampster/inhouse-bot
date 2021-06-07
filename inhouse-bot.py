@@ -1,22 +1,14 @@
 #!/usr/bin/python3
 
 import asyncio
-import threading
 import discord
 import json
 import os
 import random
-import socket
 
 from collections import deque
-from discord import player
-from discord.flags import PublicUserFlags
 from dotenv import load_dotenv
 from discord.ext import commands
-from discord.utils import get
-
-from debounce import debounce
-from serverComms import InhouseServerProtocol
 
 client = commands.Bot(command_prefix = "!", case_insensitive=True)
 client.remove_command('help')
@@ -24,6 +16,7 @@ client.remove_command('help')
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 CHANNEL_NAME = os.getenv('DISCORD_CHANNEL')
+SERVER_PASSWORD = os.getenv('SERVER_PASSWORD')
 
 # on load, load previous teams + map from the prev* files
 with open('prevmaps.json', 'r') as f:
@@ -38,6 +31,7 @@ msgList = []
 playerList = {}
 pickupStarted = 0
 pickupActive = 0
+playerNumber = 8
 mapchoice1 = None
 mapChoice2 = None
 mapChoice3 = None
@@ -64,6 +58,7 @@ async def printPlayerList(ctx):
 def DePopulatePickup():
     global pickupStarted
     global pickupActive
+    global playerNumber
     global mapsPicked
     global mapVote
     global msgList
@@ -83,6 +78,7 @@ def DePopulatePickup():
     mapsPicked = 0
     pickupStarted = 0
     pickupActive = 0
+    playerNumber = 8
     msgList = []
     blueTeam = []
     redTeam = []
@@ -175,7 +171,24 @@ async def cancel(ctx):
         await ctx.send("No pickup active.")
 
 @client.command(pass_context=True)
+async def playernumber(ctx, numPlayers: int):
+    global playerNumber
+
+    try:
+        players = int(numPlayers)
+    except:
+        await ctx.send("Given value isn't a number you doofus.")
+        return
+
+    if players % 2 == 0 and players <= 20 and players >= 2:
+        playerNumber = players
+        await ctx.send("Set pickup to fill at %d players" % playerNumber)
+    else:
+        await ctx.send("Can't set pickup to an odd number, too few, or too many players")
+
+@client.command(pass_context=True)
 async def add(ctx, player: discord.Member=None):
+    global playerNumber
     global playerList
     global pickupActive
     global vMsg
@@ -195,35 +208,35 @@ async def add(ctx, player: discord.Member=None):
         if playerId not in playerList:
             playerList[playerId] = playerName
 
-        if len(playerList) < 8:
-            await printPlayerList(ctx)
-        else:
-            pickupActive = 0
-            await printPlayerList(ctx)
+            if len(playerList) < playerNumber:
+                await printPlayerList(ctx)
+            else:
+                pickupActive = 0
+                await printPlayerList(ctx)
 
-            # ensure that playerlist is first 8 people added
-            playerList = dict(list(playerList.items())[:8])
+                # ensure that playerlist is first 8 people added
+                playerList = dict(list(playerList.items())[:8])
 
-            PickMaps()
-            mapChoice4 = "New Maps"
-            mapVotes[mapChoice4] = []
+                PickMaps()
+                mapChoice4 = "New Maps"
+                mapVotes[mapChoice4] = []
 
-            vMsg = await ctx.send("```Vote for your map!  When vote is stable, !lockmap\n\n"
-                                    + "1️⃣ " + mapChoice1 + " " * (30 - len(mapChoice1)) + str(len(mapVotes[mapChoice1])) + " Votes\n"
-                                    + "2️⃣ " + mapChoice2 + " " * (30 - len(mapChoice2)) + str(len(mapVotes[mapChoice2])) + " Votes\n"
-                                    + "3️⃣ " + mapChoice3 + " " * (30 - len(mapChoice3)) + str(len(mapVotes[mapChoice3])) + " Votes\n"
-                                    + "4️⃣ " + mapChoice4 + " " * (30 - len(mapChoice4)) + str(len(mapVotes[mapChoice4])) + " Votes```")
+                vMsg = await ctx.send("```Vote for your map!  When vote is stable, !lockmap\n\n"
+                                        + "1️⃣ " + mapChoice1 + " " * (30 - len(mapChoice1)) + "\n"
+                                        + "2️⃣ " + mapChoice2 + " " * (30 - len(mapChoice2)) + "\n"
+                                        + "3️⃣ " + mapChoice3 + " " * (30 - len(mapChoice3)) + "\n"
+                                        + "4️⃣ " + mapChoice4 + " " * (30 - len(mapChoice4)) + "```")
 
-            await vMsg.add_reaction("1️⃣")
-            await vMsg.add_reaction("2️⃣")
-            await vMsg.add_reaction("3️⃣")
-            await vMsg.add_reaction("4️⃣")
+                await vMsg.add_reaction("1️⃣")
+                await vMsg.add_reaction("2️⃣")
+                await vMsg.add_reaction("3️⃣")
+                await vMsg.add_reaction("4️⃣")
 
-            mapVote = 1
+                mapVote = 1
 
-            # for playerId in playerList.keys():
-            #     user = await client.get_user(playerId)
-            #     await client.send
+                for playerId in playerList.keys():
+                    user = await client.get_user(playerId)
+                    await user.send('#inhouse pickup filled.')
 
 @client.command(pass_context=True)
 async def remove(ctx):
@@ -260,12 +273,29 @@ async def on_reaction_add(reaction, user):
                     mapVotes[mapChoice3].append(user.id)
                 if(reaction.emoji == '4️⃣'):
                     mapVotes[mapChoice4].append(user.id)
-                await vMsg.edit(content="```Vote for your map!  When vote is stable, !lockmap\n\n"
-                                + "1️⃣ " + mapChoice1 + " " * (30 - len(mapChoice1)) + str(len(mapVotes[mapChoice1])) + " Votes\n"
-                                + "2️⃣ " + mapChoice2 + " " * (30 - len(mapChoice2)) + str(len(mapVotes[mapChoice2])) + " Votes\n"
-                                + "3️⃣ " + mapChoice3 + " " * (30 - len(mapChoice3)) + str(len(mapVotes[mapChoice3])) + " Votes\n"
-                                + "4️⃣ " + mapChoice4 + " " * (30 - len(mapChoice4)) + str(len(mapVotes[mapChoice4])) + " Votes```")
 
+                playersVoted = [playerId for mapVote in mapVotes.values() for playerId in mapVote]
+                playersAbstained = [playerList[playerId] for playerId in playerList.keys() if playerId not in playersVoted]
+                toVoteString = "```"
+                if len(playersAbstained) != 0:
+                    toVoteString = "\n💩 " + ", ".join(playersAbstained) +  " need to vote 💩```"
+
+                await vMsg.edit(content="```Vote for your map!  When vote is stable, !lockmap\n\n"
+                    + "1️⃣ " + mapChoice1 + " " * (30 - len(mapChoice1)) + mapVoteOutput(mapChoice1) + "\n"
+                    + "2️⃣ " + mapChoice2 + " " * (30 - len(mapChoice2)) + mapVoteOutput(mapChoice2) + "\n"
+                    + "3️⃣ " + mapChoice3 + " " * (30 - len(mapChoice3)) + mapVoteOutput(mapChoice3) + "\n"
+                    + "4️⃣ " + mapChoice4 + " " * (30 - len(mapChoice4)) + mapVoteOutput(mapChoice4) +
+                    + toVoteString)
+
+def mapVoteOutput(mapChoice):
+    votes = mapVotes[mapChoice]
+    numVotes = len(votes)
+    whoVoted = ", ".join([playerList[playerId] for playerId in votes])
+
+    if numVotes == 0:
+        return "0 votes"
+
+    return "%d votes (%s)" % (numVotes, whoVoted)
 
 @client.command(pass_context=True)
 async def lockmap(ctx):
@@ -317,8 +347,28 @@ async def lockmap(ctx):
 
             await ctx.send("The winning map is: " + winningMap)
             await ctx.send("🎉🎉 JOIN INHOUSE YA HOSERS 🎉🎉")
-            await ctx.send("steam://connect/104.153.105.235:27015/kawk")
+            await ctx.send("steam://connect/104.153.105.235:27015/" + SERVER_PASSWORD)
             DePopulatePickup()
+
+
+@client.command(pass_context=True)
+async def lockset(ctx, mapToLockset):
+    global previousMaps
+    global pickupActive
+    global mapVote
+
+    if pickupActive == 0 or mapVote == 1:
+        await ctx.send("Error: can only !lockset during map voting or if no pickup is active (changes the map for the last pickup)")
+        return
+
+    previousMaps.pop()
+    previousMaps.append(mapToLockset)
+
+    with open('prevmaps.json', 'w') as f:
+        json.dump(list(previousMaps), f)
+
+    await ctx.send("Set pickup map to %s" % mapToLockset)
+
 
 @client.command(pass_context=True)
 async def stats(ctx):
@@ -353,6 +403,10 @@ async def doug(ctx):
 @client.command(pass_context=True)
 async def akw(ctx):
     await ctx.send("akw likes butts 🍑")
+
+@client.command(pass_context=True)
+async def hamp(ctx):
+    await ctx.send("https://streamable.com/0328u")
 
 @client.event
 async def on_ready():
