@@ -284,7 +284,7 @@ async def on_reaction_add(reaction, user):
                     + "1️⃣ " + mapChoice1 + " " * (30 - len(mapChoice1)) + mapVoteOutput(mapChoice1) + "\n"
                     + "2️⃣ " + mapChoice2 + " " * (30 - len(mapChoice2)) + mapVoteOutput(mapChoice2) + "\n"
                     + "3️⃣ " + mapChoice3 + " " * (30 - len(mapChoice3)) + mapVoteOutput(mapChoice3) + "\n"
-                    + "4️⃣ " + mapChoice4 + " " * (30 - len(mapChoice4)) + mapVoteOutput(mapChoice4) +
+                    + "4️⃣ " + mapChoice4 + " " * (30 - len(mapChoice4)) + mapVoteOutput(mapChoice4)
                     + toVoteString)
 
 def mapVoteOutput(mapChoice):
