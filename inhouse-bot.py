@@ -236,7 +236,10 @@ async def add(ctx, player: discord.Member=None):
 
                 for playerId in playerList.keys():
                     user = await client.get_user(playerId)
-                    await user.send('#inhouse pickup filled.')
+                    if user is not None:
+                        await discord.DMChannel.send(user, '#inhouse pickup filled.')
+                    else:
+                        print("failed to PM user %s: %s" % (playerId, playerList[playerId]))
 
 @client.command(pass_context=True)
 async def remove(ctx):
@@ -357,7 +360,7 @@ async def lockset(ctx, mapToLockset):
     global pickupActive
     global mapVote
 
-    if pickupActive == 0 or mapVote == 1:
+    if pickupActive != 0 and mapVote != 1:
         await ctx.send("Error: can only !lockset during map voting or if no pickup is active (changes the map for the last pickup)")
         return
 
