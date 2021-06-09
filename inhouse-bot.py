@@ -237,12 +237,17 @@ async def add(ctx, player: discord.Member=None):
 
                 mapVote = 1
 
+                mentionString = ""
                 for playerId in playerList.keys():
-                    user = await client.get_user(playerId)
-                    if user is not None:
-                        await discord.DMChannel.send(user, '#inhouse pickup filled.')
-                    else:
-                        print("failed to PM user %s: %s" % (playerId, playerList[playerId]))
+                    mentionString = mentionString + ("<@%s> " % playerId)
+                await ctx.send(mentionString)
+
+                # for playerId in playerList.keys():
+                #     user = await client.get_user(playerId)
+                #     if user is not None:
+                #         await discord.DMChannel.send(user, '#inhouse pickup filled.')
+                #     else:
+                #         print("failed to PM user %s: %s" % (playerId, playerList[playerId]))
 
 @client.command(pass_context=True)
 async def remove(ctx):
@@ -389,7 +394,7 @@ async def lockset(ctx, mapToLockset):
 async def timeleft(ctx):
     # construct a UDP packet and send it to the server
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.sendto("BOT_MSG@TIMELEFT@".encode(), (SERVER_IP, SERVER_PORT))
+    sock.sendto("BOT_MSG@TIMELEFT@".encode(), (SERVER_IP, int(SERVER_PORT)))
 
     await asyncio.sleep(3)
     if os.path.exists('timeleft.json'):
@@ -435,7 +440,7 @@ async def tfcmap(ctx):
 
 @client.command(pass_context=True)
 async def server(ctx):
-    await ctx.send("steam://connect/104.153.105.235:27015/" % SERVER_PASSWORD)
+    await ctx.send("steam://connect/104.153.105.235:27015/%s" % SERVER_PASSWORD)
 
 @client.command(pass_context=True)
 async def teamz(ctx):
