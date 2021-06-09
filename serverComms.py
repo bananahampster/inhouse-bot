@@ -136,7 +136,7 @@ class InhouseServerProtocol:
 
         if message_parts[1] == "TIMELEFT":
             with open('timeleft.json', 'w') as f:
-                json.dump({ 'timeleft': message_parts[-1] })
+                json.dump({ 'timeleft': message_parts[-1] }, f)
 
 
     def send_message(self, msg_type, message, addr):

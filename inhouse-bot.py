@@ -399,10 +399,12 @@ async def timeleft(ctx):
     await asyncio.sleep(3)
     if os.path.exists('timeleft.json'):
         with open('timeleft.json', 'r') as f:
-            timeleft = json.load(f)
-            if timeleft is not None and timeleft['timeleft']:
-                await ctx.send("Timeleft: %s" % timeleft['timeleft'])
-            else:
+            try:
+                timeleft = json.load(f)
+                if timeleft is not None and timeleft['timeleft']:
+                    await ctx.send("Timeleft: %s" % timeleft['timeleft'])
+                    return
+            except:
                 await ctx.send("Server did not respond.")
     else:
         await ctx.send("Server did not respond")
