@@ -4,6 +4,7 @@ import asyncio
 import discord
 import json
 import os
+import socket
 import random
 
 from collections import deque
@@ -16,6 +17,8 @@ client.remove_command('help')
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 CHANNEL_NAME = os.getenv('DISCORD_CHANNEL')
+SERVER_IP = os.getenv('SERVER_IP')
+SERVER_PORT = os.getenv('SERVER_PORT') # port to communicate with server plugin
 SERVER_PASSWORD = os.getenv('SERVER_PASSWORD')
 
 # on load, load previous teams + map from the prev* files
@@ -214,8 +217,8 @@ async def add(ctx, player: discord.Member=None):
                 pickupActive = 0
                 await printPlayerList(ctx)
 
-                # ensure that playerlist is first 8 people added
-                playerList = dict(list(playerList.items())[:8])
+                # ensure that playerlist is first n people added
+                playerList = dict(list(playerList.items())[:playerNumber])
 
                 PickMaps()
                 mapChoice4 = "New Maps"
@@ -250,6 +253,16 @@ async def remove(ctx):
         if ctx.author.id in playerList:
             del playerList[ctx.author.id]
             await printPlayerList(ctx)
+
+@client.command(pass_context=True)
+@commands.has_role('ops')
+async def kick(ctx, player: discord.User):
+    global playerList
+
+    if player is not None and player.id in playerList:
+        del playerList[player.id]
+        await ctx.send("Kicked %s from the pickup." % player.mention)
+        await printPlayerList(ctx)
 
 @client.command(pass_context=True)
 async def teams(ctx):
@@ -372,6 +385,35 @@ async def lockset(ctx, mapToLockset):
 
     await ctx.send("Set pickup map to %s" % mapToLockset)
 
+@client.command(pass_context=True)
+async def timeleft(ctx):
+    # construct a UDP packet and send it to the server
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.sendto("BOT_MSG@TIMELEFT@".encode(), (SERVER_IP, SERVER_PORT))
+
+    await asyncio.sleep(3)
+    if os.path.exists('timeleft.json'):
+        with open('timeleft.json', 'r') as f:
+            timeleft = json.load(f)
+            if timeleft is not None and timeleft['timeleft']:
+                await ctx.send("Timeleft: %s" % timeleft['timeleft'])
+            else:
+                await ctx.send("Server did not respond.")
+    else:
+        await ctx.send("Server did not respond")
+
+    # try:
+    #     data, _addr = sock.recvfrom(40)
+    #     response = data.decode().split("@")
+    #     if response[0] == "BOT_MSG":
+    #         await ctx.send("Timeleft on Inhouse: %s" % response[-1])
+    #     else:
+    #         await ctx.send("Server did not respond")
+    # except TimeoutError:
+    #     await ctx.send("Server did not respond.")
+    # finally:
+    #     sock.close()
+
 
 @client.command(pass_context=True)
 async def stats(ctx):
@@ -388,8 +430,12 @@ async def logs(ctx):
     await ctx.send("Logs: http://inhouse.site.nfoservers.com/akw/")
 
 @client.command(pass_context=True)
-async def sever(ctx):
-    await ctx.send("steam://connect/104.153.105.235:27015/kawk")
+async def tfcmap(ctx):
+    await ctx.send("Maps: http://mrclan.com/tfcmaps/?C=N;O=A")
+
+@client.command(pass_context=True)
+async def server(ctx):
+    await ctx.send("steam://connect/104.153.105.235:27015/" % SERVER_PASSWORD)
 
 @client.command(pass_context=True)
 async def teamz(ctx):

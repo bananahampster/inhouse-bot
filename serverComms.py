@@ -134,6 +134,10 @@ class InhouseServerProtocol:
         if message_parts[1] == "END":
             getLastGameLogs()
 
+        if message_parts[1] == "TIMELEFT":
+            with open('timeleft.json', 'w') as f:
+                json.dump({ 'timeleft': message_parts[-1] })
+
 
     def send_message(self, msg_type, message, addr):
         data = ("BOT_MSG@%s@%s" % (msg_type, message)).encode()
