@@ -349,7 +349,7 @@ async def lockmap(ctx):
         if(winningMap == "New Maps"):
             mapVotes = {}
             PickMaps()
-            mapChoice4 = random.choice([pickedMap for (pickedMap, votes) in rankedVotes if votes == rankedVotes[1][1]])
+            mapChoice4 = random.choice([pickedMap for (pickedMap, votes) in rankedVotes if votes == rankedVotes[1][1] and pickedMap != "New Maps"])
             mapVotes[mapChoice4] = []
 
             vMsg = await ctx.send("```Vote for your map!  When vote is stable, !lockmap\n\n"
