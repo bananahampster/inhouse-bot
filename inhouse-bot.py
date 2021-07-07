@@ -138,7 +138,8 @@ async def pickup(ctx):
         with open('maplist.json') as f:
             mapList = json.load(f)
             for prevMap in previousMaps:
-                mapList.remove(prevMap)
+                if prevMap in mapList:
+                    mapList.remove(prevMap)
 
         DePopulatePickup
 
