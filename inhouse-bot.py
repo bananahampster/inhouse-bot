@@ -54,9 +54,10 @@ pickNum = 1
 # @debounce(2)
 async def printPlayerList(ctx):
     global playerList
+    global playerNumber
 
     msg =  ", ".join([s for s in playerList.values()])
-    await ctx.send("```\nPlayers (" + str(len(playerList)) + "/8)\n" + msg + "```")
+    await ctx.send("```\nPlayers (" + str(len(playerList)) + "/" + str(playerNumber) + ")\n" + msg + "```")
 
 def DePopulatePickup():
     global pickupStarted
@@ -347,7 +348,7 @@ async def lockmap(ctx):
 
         # don't allow lockmap if no votes were cast
         if highestVote == 0:
-            ctx.send("!lockmap denied; no votes were cast.")
+            await ctx.send("!lockmap denied; no votes were cast.")
             return
 
         winningMaps = [pickedMap for (pickedMap, votes) in rankedVotes if votes == highestVote ]
