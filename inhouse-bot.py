@@ -344,6 +344,12 @@ async def lockmap(ctx):
         rankedVotes = sorted(mapTally, key=lambda e: e[1], reverse=True)
 
         highestVote = rankedVotes[0][1]
+
+        # don't allow lockmap if no votes were cast
+        if highestVote == 0:
+            ctx.send("!lockmap denied; no votes were cast.")
+            return
+
         winningMaps = [pickedMap for (pickedMap, votes) in rankedVotes if votes == highestVote ]
         winningMap = random.choice(winningMaps)
 
