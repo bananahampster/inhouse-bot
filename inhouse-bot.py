@@ -472,6 +472,14 @@ async def akw(ctx):
 async def hamp(ctx):
     await ctx.send("https://streamable.com/0328u")
 
+@client.command(pass_context=True)
+async def nuki(ctx):
+    await ctx.send("https://clips.twitch.tv/PoorRefinedTurnipFreakinStinkin")
+
+@client.command(pass_context=True)
+async def repair(ctx):
+    await ctx.send("https://www.twitch.tv/davjs/clip/ViscousPuzzledKoupreySmoocherZ")
+
 @client.event
 async def on_ready():
     print(f'{client.user} is aliiiiiive!')
