@@ -480,6 +480,10 @@ async def nuki(ctx):
 async def repair(ctx):
     await ctx.send("https://www.twitch.tv/davjs/clip/ViscousPuzzledKoupreySmoocherZ")
 
+@client.command(pass_context=True)
+async def country(ctx):
+    await ctx.send("http://hampalyzer.com/country-trolls-hump2.mp4")
+
 @client.event
 async def on_ready():
     print(f'{client.user} is aliiiiiive!')
