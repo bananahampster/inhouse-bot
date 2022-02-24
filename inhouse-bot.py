@@ -451,7 +451,7 @@ async def forcestats(ctx):
         f.write("[]")
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.sendto("BOT_MSG@END".encode(), ('0.0.0.0', CLIENT_PORT))
+    sock.sendto("BOT_MSG@END".encode(), ('0.0.0.0', int(CLIENT_PORT)))
 
     await asyncio.sleep(5)
 
