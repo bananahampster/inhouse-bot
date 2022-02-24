@@ -280,7 +280,10 @@ async def kick(ctx, player: discord.User):
 
 @client.command(pass_context=True)
 async def teams(ctx):
-    await printPlayerList(ctx)
+    if pickupStarted == 0:
+        ctx.send("No pickup active.")
+    else:
+        await printPlayerList(ctx)
 
 @client.event
 async def on_reaction_add(reaction, user):
