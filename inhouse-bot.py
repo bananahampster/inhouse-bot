@@ -20,13 +20,20 @@ CHANNEL_NAME = os.getenv('DISCORD_CHANNEL')
 SERVER_IP = os.getenv('SERVER_IP')
 SERVER_PORT = os.getenv('SERVER_PORT') # port to communicate with server plugin
 SERVER_PASSWORD = os.getenv('SERVER_PASSWORD')
+CLIENT_PORT = os.getenv('CLIENT_PORT') # port to communicate with client plugin listener (serverComms.py)
 
 # on load, load previous teams + map from the prev* files
-with open('prevmaps.json', 'r') as f:
-    previousMaps = deque(json.load(f), maxlen=3)
+if os.path.exists('prevmaps.json'):
+    with open('prevmaps.json', 'r') as f:
+        previousMaps = deque(json.load(f), maxlen=3)
+else:
+    previousMaps = []
 
-with open('prevteams.json', 'r') as f:
-    previousTeam = json.load(f)
+if os.path.exists('prevteams.json'):
+    with open('prevteams.json', 'r') as f:
+        previousTeam = json.load(f)
+else:
+    previousTeam = []
 
 mapList = []
 
@@ -437,6 +444,22 @@ async def stats(ctx):
         await ctx.send('Stats: %s' % prevlog['site'])
 
 @client.command(pass_context=True)
+async def forcestats(ctx):
+    await ctx.send("force-parsing stats; wait 5 sec...")
+
+    with open('prevlog.json', 'w') as f:
+        f.write("[]")
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.sendto("BOT_MSG@END".encode(), ('0.0.0.0', CLIENT_PORT))
+
+    await asyncio.sleep(5)
+
+    with open('prevlog.json', 'r') as f:
+        prevlog = json.load(f)
+        await ctx.send('Stats: %s' % prevlog['site'])
+
+@client.command(pass_context=True)
 async def hltv(ctx):
     await ctx.send("HLTV: http://inhouse.site.nfoservers.com/HLTV/akw/")
 
@@ -483,6 +506,28 @@ async def repair(ctx):
 @client.command(pass_context=True)
 async def country(ctx):
     await ctx.send("http://hampalyzer.com/country-trolls-hump2.mp4")
+
+@client.command(pass_context=True)
+async def neon(ctx):
+    await ctx.send("https://clips.twitch.tv/VenomousCrepuscularJuicePeanutButterJellyTime")
+
+@client.command(pass_context=True)
+async def proonz(ctx):
+    await ctx.send("https://streamable.com/xugb7r")
+
+@client.command(pass_context=True)
+async def seagals(ctx):
+    clips = [
+        "https://streamable.com/mt9hjy",
+        "https://streamable.com/7ko1hh",
+        "https://streamable.com/m0cmzf"
+    ]
+
+    await ctx.send(random.choice(clips))
+
+@client.command(pass_context=True)
+async def angel(ctx):
+    await ctx.send("https://www.twitch.tv/bananahampster/clip/LittleSpikyTeaCorgiDerp")
 
 @client.event
 async def on_ready():

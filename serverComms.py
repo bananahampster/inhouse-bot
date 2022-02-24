@@ -42,8 +42,11 @@ def getLastGameLogs():
     global FTP_PASSWD
     global FTP_SERVER
 
-    with open('prevlog.json', 'r') as f:
-        prevlog = json.load(f)
+    if os.path.exists('prevlog.json'):
+        with open('prevlog.json', 'r') as f:
+            prevlog = json.load(f)
+    else:
+        prevlog = []
 
     ftp = FTP(FTP_SERVER, user=FTP_USER, passwd=FTP_PASSWD)
     ftp.cwd('/tfc/logs')
