@@ -444,20 +444,23 @@ async def stats(ctx):
         await ctx.send('Stats: %s' % prevlog['site'])
 
 @client.command(pass_context=True)
+@commands.has_role('ops')
 async def forcestats(ctx):
-    await ctx.send("force-parsing stats; wait 5 sec...")
+    print("forcestats -- channel name" + ctx.channel.name)
+    if ctx.channel.name == 'illuminati':
+        await ctx.send("force-parsing stats; wait 5 sec...")
 
-    with open('prevlog.json', 'w') as f:
-        f.write("[]")
+        with open('prevlog.json', 'w') as f:
+            f.write("[]")
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.sendto("BOT_MSG@END".encode(), ('0.0.0.0', int(CLIENT_PORT)))
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.sendto("BOT_MSG@END".encode(), ('0.0.0.0', int(CLIENT_PORT)))
 
-    await asyncio.sleep(5)
+        await asyncio.sleep(5)
 
-    with open('prevlog.json', 'r') as f:
-        prevlog = json.load(f)
-        await ctx.send('Stats: %s' % prevlog['site'])
+        with open('prevlog.json', 'r') as f:
+            prevlog = json.load(f)
+            await ctx.send('Stats: %s' % prevlog['site'])
 
 @client.command(pass_context=True)
 async def hltv(ctx):
@@ -527,7 +530,15 @@ async def seagals(ctx):
 
 @client.command(pass_context=True)
 async def angel(ctx):
-    await ctx.send("https://www.twitch.tv/bananahampster/clip/LittleSpikyTeaCorgiDerp")
+    await ctx.send("https://www.twitch.tv/nugki/clip/BlindingPatientPotPeteZaroll")
+
+@client.command(pass_context=True)
+async def help(ctx):
+    await ctx.send("pickup: !pickup !add !remove !teams !lockmap !cancel")
+    await ctx.send("info: !stats !timeleft !hltv !logs !tfcmap !server")
+    await ctx.send("admin: !playernumber !kick !lockset !forcestats")
+    await ctx.send("fun: !hamp !teamz !packup !doug !akw !nuki !neon")
+    await ctx.send("fun: !repair !country !proonz !angel !seagals (1/3)")
 
 @client.event
 async def on_ready():
