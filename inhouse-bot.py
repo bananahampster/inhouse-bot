@@ -522,6 +522,14 @@ async def proonz(ctx):
     await ctx.send("https://streamable.com/xugb7r")
 
 @client.command(pass_context=True)
+async def masz(ctx):
+    await ctx.send("https://www.twitch.tv/neonlight_tfc/clip/BoldEnthusiasticFerretKevinTurtle-Wz33i-BA34JDjxVp")
+
+@client.command(pass_context=True)
+async def swk(ctx):
+    await ctx.send("https://streamable.com/ut068u")
+
+@client.command(pass_context=True)
 async def seagals(ctx):
     clips = [
         "https://streamable.com/mt9hjy",
@@ -540,8 +548,8 @@ async def help(ctx):
     await ctx.send("pickup: !pickup !add !remove !teams !lockmap !cancel")
     await ctx.send("info: !stats !timeleft !hltv !logs !tfcmap !server")
     await ctx.send("admin: !playernumber !kick !lockset !forcestats")
-    await ctx.send("fun: !hamp !teamz !packup !doug !akw !nuki !neon")
-    await ctx.send("fun: !repair !country !proonz !angel !seagals (1/3)")
+    await ctx.send("fun: !hamp !teamz !packup !doug !akw !nuki !neon !swk")
+    await ctx.send("fun: !repair !country !proonz !angel !masz !seagals (1/3)")
 
 @client.event
 async def on_ready():
