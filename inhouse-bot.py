@@ -547,6 +547,10 @@ async def angel(ctx):
 @client.command(pass_context=True)
 async def ja(ctx):
     await ctx.send("https://www.twitch.tv/bananahampster/clip/DependableSpineyTruffleBIRB")
+    
+@client.command(pass_context=True)
+async def kix(ctx):
+    await ctx.send("https://www.twitch.tv/r0flz/clip/UglyGrotesqueCattlePraiseIt")
 
 @client.command(pass_context=True)
 async def help(ctx):
@@ -554,7 +558,7 @@ async def help(ctx):
     await ctx.send("info: !stats !timeleft !hltv !logs !tfcmap !server")
     await ctx.send("admin: !playernumber !kick !lockset !forcestats")
     await ctx.send("fun: !hamp !teamz !packup !doug !akw !nuki !neon !swk !ja")
-    await ctx.send("fun: !repair !country !proonz !angel !masz !seagals (1/4)")
+    await ctx.send("fun: !repair !country !proonz !angel !masz !seagals (1/4) !kix")
 
 @client.event
 async def on_ready():
