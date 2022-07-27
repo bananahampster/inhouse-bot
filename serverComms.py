@@ -62,8 +62,8 @@ def getLastGameLogs():
             print("already parsed the latest log")
             return
 
-        # check the size, should be >60kB
-        if int(ftp.size(logFile)) > 60000:
+        # check the size, should be >100kB
+        if int(ftp.size(logFile)) > 100000:
             logModified = datetime.strptime(ftp.voidcmd("MDTM %s" % logFile).split()[-1], '%Y%m%d%H%M%S')
             if firstLog is None:
                 firstLog = (logFile, logModified)
