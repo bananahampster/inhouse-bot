@@ -389,6 +389,20 @@ async def lockmap(ctx):
             await ctx.send("steam://connect/104.153.105.235:27015/" + SERVER_PASSWORD)
             DePopulatePickup()
 
+@client.command(pass_context=True)
+async def vote(ctx):
+    global mapVote
+    global playerList
+    global mapVotes
+
+    if mapVote == 1:
+        playersVoted = [playerId for mapVote in mapVotes.values() for playerId in mapVote]
+        playersAbstained = [playerId for playerId in playerList.keys() if playerId not in playersVoted]
+
+        mentionString = "🗳️🗳️ vote maps or kick: "
+        for playerId in playersAbstained:
+            mentionString = mentionString + ("<@%s> " % playerId)
+        await ctx.send(mentionString + " 🗳️🗳️")
 
 @client.command(pass_context=True)
 async def lockset(ctx, mapToLockset):
@@ -426,19 +440,6 @@ async def timeleft(ctx):
                 await ctx.send("Server did not respond.")
     else:
         await ctx.send("Server did not respond")
-
-    # try:
-    #     data, _addr = sock.recvfrom(40)
-    #     response = data.decode().split("@")
-    #     if response[0] == "BOT_MSG":
-    #         await ctx.send("Timeleft on Inhouse: %s" % response[-1])
-    #     else:
-    #         await ctx.send("Server did not respond")
-    # except TimeoutError:
-    #     await ctx.send("Server did not respond.")
-    # finally:
-    #     sock.close()
-
 
 @client.command(pass_context=True)
 async def stats(ctx):
@@ -547,7 +548,7 @@ async def angel(ctx):
 @client.command(pass_context=True)
 async def ja(ctx):
     await ctx.send("https://www.twitch.tv/bananahampster/clip/DependableSpineyTruffleBIRB")
-    
+
 @client.command(pass_context=True)
 async def kix(ctx):
     await ctx.send("https://www.twitch.tv/r0flz/clip/UglyGrotesqueCattlePraiseIt")
@@ -556,7 +557,7 @@ async def kix(ctx):
 async def help(ctx):
     await ctx.send("pickup: !pickup !add !remove !teams !lockmap !cancel")
     await ctx.send("info: !stats !timeleft !hltv !logs !tfcmap !server")
-    await ctx.send("admin: !playernumber !kick !lockset !forcestats")
+    await ctx.send("admin: !playernumber !kick !lockset !forcestats !vote")
     await ctx.send("fun: !hamp !teamz !packup !doug !akw !nuki !neon !swk !ja")
     await ctx.send("fun: !repair !country !proonz !angel !masz !seagals (1/4) !kix")
 
