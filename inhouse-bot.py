@@ -214,7 +214,7 @@ async def add(ctx, player: discord.Member=None):
     # if player is None:
     player = ctx.author
 
-    if pickupActive == 1:
+    if pickupActive == 1 and ctx.channel.name == 'tfc-pickup-na':
         playerId = player.id
         playerName = player.display_name
         if playerId not in playerList:
