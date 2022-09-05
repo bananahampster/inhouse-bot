@@ -361,8 +361,13 @@ async def lockmap(ctx):
             await ctx.send("!lockmap denied; no votes were cast.")
             return
 
-        winningMaps = [pickedMap for (pickedMap, votes) in rankedVotes if votes == highestVote ]
-        winningMap = random.choice(winningMaps)
+        winningMaps = [pickedMap for (pickedMap, votes) in rankedVotes if votes == highestVote]
+
+        # don't allow "New Maps" to win
+        if len(winningMaps) > 1 and "New Maps" in winningMaps:
+            winningMap = "New Maps"
+        else:
+            winningMap = random.choice(winningMaps)
 
         if(winningMap == "New Maps"):
             mapVotes = {}
