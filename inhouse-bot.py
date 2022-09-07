@@ -25,7 +25,7 @@ CLIENT_PORT = os.getenv('CLIENT_PORT') # port to communicate with client plugin 
 # on load, load previous teams + map from the prev* files
 if os.path.exists('prevmaps.json'):
     with open('prevmaps.json', 'r') as f:
-        previousMaps = deque(json.load(f), maxlen=3)
+        previousMaps = deque(json.load(f), maxlen=5)
 else:
     previousMaps = []
 
@@ -210,6 +210,7 @@ async def add(ctx, player: discord.Member=None):
     global mapChoice4
     global mapVotes
     global mapVote
+    global previousMaps
 
     # if player is None:
     player = ctx.author
@@ -245,6 +246,8 @@ async def add(ctx, player: discord.Member=None):
                 await vMsg.add_reaction("4️⃣")
 
                 mapVote = 1
+
+                await ctx.send("Maps %s were recently played and are removed from voting." % ", ".join(previousMaps))
 
                 mentionString = ""
                 for playerId in playerList.keys():
