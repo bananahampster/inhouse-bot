@@ -50,7 +50,8 @@ def getLastGameLogs():
 
     ftp = FTP(FTP_SERVER, user=FTP_USER, passwd=FTP_PASSWD)
     ftp.cwd('/tfc/logs')
-    logFiles = ftp.nlst('-t') # get list of logs, files descending
+    logFiles = ftp.nlst('-t') # get list of logs by time
+    logFiles.reverse() # sort descending
 
     firstLog = None
     secondLog = None
