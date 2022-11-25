@@ -11,7 +11,10 @@ from collections import deque
 from dotenv import load_dotenv
 from discord.ext import commands
 
-client = commands.Bot(command_prefix = "!", case_insensitive=True)
+intents = discord.Intents.default()
+intents.message_content = True
+
+client = commands.Bot(command_prefix = "!", case_insensitive=True, intents=intents)
 client.remove_command('help')
 
 load_dotenv()
@@ -64,9 +67,12 @@ async def printPlayerList(ctx):
     global playerNumber
 
     msg =  ", ".join([s for s in playerList.values()])
-    await ctx.send("```\nPlayers (" + str(len(playerList)) + "/" + str(playerNumber) + ")\n" + msg + "```")
+    counter = str(len(playerList)) + "/" + str(playerNumber)
 
-def DePopulatePickup():
+    await ctx.send("```\nPlayers (" + counter + ")\n" + msg + "```")
+    await updateNick(ctx, counter)
+
+async def DePopulatePickup(ctx):
     global pickupStarted
     global pickupActive
     global playerNumber
@@ -97,7 +103,11 @@ def DePopulatePickup():
     mapSelected = []
     mapVotes = {}
 
-def PickMaps():
+    if ctx:
+        await updateNick(ctx)
+
+
+def PickMaps(initial=False):
     global mapChoice1
     global mapChoice2
     global mapChoice3
@@ -105,19 +115,25 @@ def PickMaps():
     global mapVotes
     global mapList
 
-    mapname = random.choice(mapList)
+    mapname = random.choice(mapList["tier1"])
     mapChoice1 = mapname
-    mapList.remove(mapname)
+    mapList["tier1"].remove(mapname)
     mapVotes[mapChoice1] = []
 
-    mapname = random.choice(mapList)
-    mapChoice2 = mapname
-    mapList.remove(mapname)
-    mapVotes[mapChoice2] = []
+    if initial:
+        mapname = random.choice(mapList["tier2"])
+        mapChoice2 = mapname
+        mapList["tier2"].remove(mapname)
+        mapVotes[mapChoice2] = []
+    else:
+        mapname = random.choice(mapList["tier1"])
+        mapChoice2 = mapname
+        mapList["tier1"].remove(mapname)
+        mapVotes[mapChoice2] = []
 
-    mapname = random.choice(mapList)
+    mapname = random.choice(mapList["tier2"])
     mapChoice3 = mapname
-    mapList.remove(mapname)
+    mapList["tier2"].remove(mapname)
     mapVotes[mapChoice3] = []
 
 def RecordMapAndTeams(winningMap):
@@ -133,6 +149,14 @@ def RecordMapAndTeams(winningMap):
     with open('prevteams.json', 'w') as f:
         json.dump(previousTeam, f)
 
+async def updateNick(ctx, status=None):
+    if status == "" or status is None:
+        status = None
+    else:
+        status = "inhouse-bot (" + status + ")"
+
+    await ctx.message.guild.me.edit(nick=status)
+
 @client.command(pass_context=True)
 async def pickup(ctx):
     global pickupStarted
@@ -140,14 +164,16 @@ async def pickup(ctx):
     global mapVote
     global mapsPicked
     global mapList
+    global playerNumber
     global previousMaps
 
     if pickupStarted == 0 and pickupActive == 0 and mapVote == 0 and mapsPicked == 0 and pickNum == 1:
         with open('maplist.json') as f:
             mapList = json.load(f)
             for prevMap in previousMaps:
-                if prevMap in mapList:
-                    mapList.remove(prevMap)
+                for tier in mapList:
+                    if prevMap in tier:
+                        tier.remove(prevMap)
 
         DePopulatePickup
 
@@ -178,7 +204,7 @@ async def cancel(ctx):
         pickupStarted = 0
         pickupActive = 0
         await ctx.send("Pickup canceled.")
-        DePopulatePickup()
+        await DePopulatePickup(ctx)
     else:
         await ctx.send("No pickup active.")
 
@@ -226,11 +252,12 @@ async def add(ctx, player: discord.Member=None):
             else:
                 pickupActive = 0
                 await printPlayerList(ctx)
+                await updateNick(ctx, "voting...")
 
                 # ensure that playerlist is first n people added
                 playerList = dict(list(playerList.items())[:playerNumber])
 
-                PickMaps()
+                PickMaps(True)
                 mapChoice4 = "New Maps"
                 mapVotes[mapChoice4] = []
 
@@ -395,7 +422,7 @@ async def lockmap(ctx):
             await ctx.send("The winning map is: " + winningMap)
             await ctx.send("🎉🎉 JOIN INHOUSE YA HOSERS 🎉🎉")
             await ctx.send("steam://connect/104.153.105.235:27015/" + SERVER_PASSWORD)
-            DePopulatePickup()
+            await DePopulatePickup(ctx)
 
 @client.command(pass_context=True)
 async def vote(ctx):
