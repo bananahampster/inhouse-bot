@@ -45,12 +45,9 @@ playerList = {}
 pickupStarted = 0
 pickupActive = 0
 playerNumber = 8
-mapchoice1 = None
-mapChoice2 = None
-mapChoice3 = None
-mapChoice4 = None
-mapSelected = []
-mapVotes = {}
+
+mapChoices = []
+
 blueTeam = []
 redTeam = []
 alreadyVoted = []
@@ -60,6 +57,16 @@ ordered = []
 mapsPicked = 0
 captains = []
 pickNum = 1
+
+
+class MapChoice:
+    def __init__(self, mapName, decoration=None):
+        self.mapName = mapName
+        self.decoration = decoration
+        self.votes = []
+
+    ## maybe other voting methods here?
+
 
 # @debounce(2)
 async def printPlayerList(ctx):
@@ -82,7 +89,6 @@ async def DePopulatePickup(ctx):
     global playerList
     global blueTeam
     global redTeam
-    global mapSelected
     global ordered
     global mapVotes
     global captains
@@ -95,12 +101,11 @@ async def DePopulatePickup(ctx):
     mapsPicked = 0
     pickupStarted = 0
     pickupActive = 0
-    playerNumber = 8
+    playerNumber = 2
     msgList = []
     blueTeam = []
     redTeam = []
     playerList = {}
-    mapSelected = []
     mapVotes = {}
 
     if ctx:
@@ -108,33 +113,20 @@ async def DePopulatePickup(ctx):
 
 
 def PickMaps(initial=False):
-    global mapChoice1
-    global mapChoice2
-    global mapChoice3
-    global mapSelected
-    global mapVotes
     global mapList
+    global mapChoices
 
-    mapname = random.choice(mapList["tier1"])
-    mapChoice1 = mapname
-    mapList["tier1"].remove(mapname)
-    mapVotes[mapChoice1] = []
+    mapChoices = []
+    for i in range(3):
+        if i == 0 or (i == 1 and not initial):
+            mapname = random.choice(mapList["tier1"])
+            mapList["tier1"].remove(mapname)
+            mapChoices.append(MapChoice(mapname, "🌟"))
+        else:
+            mapname = random.choice(mapList["tier2"])
+            mapList["tier2"].remove(mapname)
+            mapChoices.append(MapChoice(mapname))
 
-    if initial:
-        mapname = random.choice(mapList["tier2"])
-        mapChoice2 = mapname
-        mapList["tier2"].remove(mapname)
-        mapVotes[mapChoice2] = []
-    else:
-        mapname = random.choice(mapList["tier1"])
-        mapChoice2 = mapname
-        mapList["tier1"].remove(mapname)
-        mapVotes[mapChoice2] = []
-
-    mapname = random.choice(mapList["tier2"])
-    mapChoice3 = mapname
-    mapList["tier2"].remove(mapname)
-    mapVotes[mapChoice3] = []
 
 def RecordMapAndTeams(winningMap):
     global previousMaps
@@ -179,6 +171,7 @@ async def pickup(ctx):
 
         pickupStarted = 1
         await ctx.send("Pickup started. !add in 10 seconds")
+        await updateNick(ctx, "starting...")
         await asyncio.sleep(5)
         await ctx.send("!add in 5 seconds")
         await asyncio.sleep(5)
@@ -221,8 +214,34 @@ async def playernumber(ctx, numPlayers: int):
     if players % 2 == 0 and players <= 20 and players >= 2:
         playerNumber = players
         await ctx.send("Set pickup to fill at %d players" % playerNumber)
+        await updateNick(ctx, str(len(playerList)) + "/" + str(playerNumber))
     else:
         await ctx.send("Can't set pickup to an odd number, too few, or too many players")
+
+def printMapList():
+    global mapChoices
+
+    mapString = ""
+    emoji = ["1️⃣", "2️⃣", "3️⃣", "4️⃣"]
+
+    for i in range(len(mapChoices)):
+        mapChoice = mapChoices[i]
+
+        votes = mapChoice.votes
+        numVotes = len(votes)
+        whoVoted = ", ".join([playerList[playerId] for playerId in votes])
+
+        if numVotes == 0:
+            voteString = "0 votes"
+        else:
+            voteString = "%d votes (%s)" % (numVotes, whoVoted)
+
+        mapName = mapChoice.mapName
+        decoration = mapChoice.decoration or ""
+        mapString = mapString + "\n" + emoji[i] + " " + mapName + " " + decoration + " " * (25 - len(mapName) - 2 * len(decoration)) + voteString
+
+    return mapString
+
 
 @client.command(pass_context=True)
 async def add(ctx, player: discord.Member=None):
@@ -230,13 +249,10 @@ async def add(ctx, player: discord.Member=None):
     global playerList
     global pickupActive
     global vMsg
-    global mapChoice1
-    global mapChoice2
-    global mapChoice3
-    global mapChoice4
-    global mapVotes
     global mapVote
     global previousMaps
+
+    global mapChoices
 
     # if player is None:
     player = ctx.author
@@ -258,14 +274,9 @@ async def add(ctx, player: discord.Member=None):
                 playerList = dict(list(playerList.items())[:playerNumber])
 
                 PickMaps(True)
-                mapChoice4 = "New Maps"
-                mapVotes[mapChoice4] = []
+                mapChoices.append(MapChoice("New Maps"))
 
-                vMsg = await ctx.send("```Vote for your map!  When vote is stable, !lockmap\n\n"
-                                        + "1️⃣ " + mapChoice1 + " " * (30 - len(mapChoice1)) + "\n"
-                                        + "2️⃣ " + mapChoice2 + " " * (30 - len(mapChoice2)) + "\n"
-                                        + "3️⃣ " + mapChoice3 + " " * (30 - len(mapChoice3)) + "\n"
-                                        + "4️⃣ " + mapChoice4 + " " * (30 - len(mapChoice4)) + "```")
+                vMsg = await ctx.send("```Vote for your map!  When vote is stable, !lockmap\n" + printMapList() + "```")
 
                 await vMsg.add_reaction("1️⃣")
                 await vMsg.add_reaction("2️⃣")
@@ -281,12 +292,6 @@ async def add(ctx, player: discord.Member=None):
                     mentionString = mentionString + ("<@%s> " % playerId)
                 await ctx.send(mentionString)
 
-                # for playerId in playerList.keys():
-                #     user = await client.get_user(playerId)
-                #     if user is not None:
-                #         await discord.DMChannel.send(user, '#inhouse pickup filled.')
-                #     else:
-                #         print("failed to PM user %s: %s" % (playerId, playerList[playerId]))
 
 @client.command(pass_context=True)
 async def remove(ctx):
@@ -321,36 +326,39 @@ async def on_reaction_add(reaction, user):
     global playerList
     global alreadyVoted
     global mapVotes
+
+    global mapChoices
+
     #print(reaction.author.display_name)
     if((reaction.message.channel.name == CHANNEL_NAME) and (mapVote == 1) and (user.display_name != "inhouse-bot")):
         if((reaction.emoji == '1️⃣') or (reaction.emoji == '2️⃣') or (reaction.emoji == '3️⃣') or (reaction.emoji == '4️⃣')):
             if(user.id in playerList):
-                for i in list(mapVotes):
-                    if(user.id in mapVotes[i]):
-                        mapVotes[i].remove(user.id)
-                if(reaction.emoji == '1️⃣'):
-                    mapVotes[mapChoice1].append(user.id)
-                if(reaction.emoji == '2️⃣'):
-                    mapVotes[mapChoice2].append(user.id)
-                if(reaction.emoji == '3️⃣'):
-                    mapVotes[mapChoice3].append(user.id)
-                if(reaction.emoji == '4️⃣'):
-                    mapVotes[mapChoice4].append(user.id)
+                # remove any existing votes
+                for mapChoice in mapChoices:
+                    if(user.id in mapChoice.votes):
+                        mapChoice.votes.remove(user.id)
 
-                playersVoted = [playerId for mapVote in mapVotes.values() for playerId in mapVote]
+                # add new votes
+                if(reaction.emoji == '1️⃣'):
+                    mapChoices[0].votes.append(user.id)
+                if(reaction.emoji == '2️⃣'):
+                    mapChoices[1].votes.append(user.id)
+                if(reaction.emoji == '3️⃣'):
+                    mapChoices[2].votes.append(user.id)
+                if(reaction.emoji == '4️⃣'):
+                    mapChoices[3].votes.append(user.id)
+
+                playersVoted = [playerId for mapChoice in mapChoices for playerId in mapChoice.votes]
                 playersAbstained = [playerList[playerId] for playerId in playerList.keys() if playerId not in playersVoted]
                 toVoteString = "```"
                 if len(playersAbstained) != 0:
                     toVoteString = "\n💩 " + ", ".join(playersAbstained) +  " need to vote 💩```"
 
-                await vMsg.edit(content="```Vote for your map!  When vote is stable, !lockmap\n\n"
-                    + "1️⃣ " + mapChoice1 + " " * (30 - len(mapChoice1)) + mapVoteOutput(mapChoice1) + "\n"
-                    + "2️⃣ " + mapChoice2 + " " * (30 - len(mapChoice2)) + mapVoteOutput(mapChoice2) + "\n"
-                    + "3️⃣ " + mapChoice3 + " " * (30 - len(mapChoice3)) + mapVoteOutput(mapChoice3) + "\n"
-                    + "4️⃣ " + mapChoice4 + " " * (30 - len(mapChoice4)) + mapVoteOutput(mapChoice4)
-                    + toVoteString)
+                await vMsg.edit(content="```Vote for your map!  When vote is stable, !lockmap\n" + printMapList() + toVoteString)
 
 def mapVoteOutput(mapChoice):
+    global mapChoices
+
     votes = mapVotes[mapChoice]
     numVotes = len(votes)
     whoVoted = ", ".join([playerList[playerId] for playerId in votes])
@@ -363,12 +371,10 @@ def mapVoteOutput(mapChoice):
 @client.command(pass_context=True)
 async def lockmap(ctx):
     global mapsPicked
-    global mapChoice1
-    global mapChoice2
-    global mapChoice3
-    global mapChoice4
-    global mapVotes
     global mapVote
+
+    global mapChoices
+
     global vMsg
     global mapList
     global blueTeam
@@ -381,7 +387,7 @@ async def lockmap(ctx):
 
     if(mapVote == 1):
         # get top maps
-        mapTally = [(pickedMap, len(votes)) for (pickedMap, votes) in mapVotes.items()]
+        mapTally = [(mapChoice.mapName, len(mapChoice.votes)) for mapChoice in mapChoices]
         rankedVotes = sorted(mapTally, key=lambda e: e[1], reverse=True)
 
         highestVote = rankedVotes[0][1]
@@ -400,16 +406,11 @@ async def lockmap(ctx):
             winningMap = random.choice(winningMaps)
 
         if(winningMap == "New Maps"):
-            mapVotes = {}
             PickMaps()
-            mapChoice4 = random.choice([pickedMap for (pickedMap, votes) in rankedVotes if votes == rankedVotes[1][1] and pickedMap != "New Maps"])
-            mapVotes[mapChoice4] = []
+            carryOverMap = random.choice([pickedMap for (pickedMap, votes) in rankedVotes if votes == rankedVotes[1][1] and pickedMap != "New Maps"])
+            mapChoices.append(MapChoice(carryOverMap, "🔁"))
 
-            vMsg = await ctx.send("```Vote for your map!  When vote is stable, !lockmap\n\n"
-                                    + "1️⃣ " + mapChoice1 + " " * (30 - len(mapChoice1)) + str(len(mapVotes[mapChoice1])) + " Votes\n"
-                                    + "2️⃣ " + mapChoice2 + " " * (30 - len(mapChoice2)) + str(len(mapVotes[mapChoice2])) + " Votes\n"
-                                    + "3️⃣ " + mapChoice3 + " " * (30 - len(mapChoice3)) + str(len(mapVotes[mapChoice3])) + " Votes\n"
-                                    + "4️⃣ " + mapChoice4 + " " * (30 - len(mapChoice4)) + str(len(mapVotes[mapChoice4])) + " Votes```")
+            vMsg = await ctx.send("```Vote for your map!  When vote is stable, !lockmap\n" + printMapList() + "```")
 
             await vMsg.add_reaction("1️⃣")
             await vMsg.add_reaction("2️⃣")
@@ -431,7 +432,7 @@ async def vote(ctx):
     global mapVotes
 
     if mapVote == 1:
-        playersVoted = [playerId for mapVote in mapVotes.values() for playerId in mapVote]
+        playersVoted = [playerId for mapChoice in mapChoices for playerId in mapChoice.votes]
         playersAbstained = [playerId for playerId in playerList.keys() if playerId not in playersVoted]
 
         mentionString = "🗳️🗳️ vote maps or kick: "
