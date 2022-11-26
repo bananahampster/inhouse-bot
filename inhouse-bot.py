@@ -90,7 +90,6 @@ async def DePopulatePickup(ctx):
     global blueTeam
     global redTeam
     global ordered
-    global mapVotes
     global captains
     global pickNum
 
@@ -101,12 +100,11 @@ async def DePopulatePickup(ctx):
     mapsPicked = 0
     pickupStarted = 0
     pickupActive = 0
-    playerNumber = 2
+    playerNumber = 8
     msgList = []
     blueTeam = []
     redTeam = []
     playerList = {}
-    mapVotes = {}
 
     if ctx:
         await updateNick(ctx)
@@ -163,7 +161,7 @@ async def pickup(ctx):
         with open('maplist.json') as f:
             mapList = json.load(f)
             for prevMap in previousMaps:
-                for tier in mapList:
+                for tier in mapList.values():
                     if prevMap in tier:
                         tier.remove(prevMap)
 
@@ -325,7 +323,6 @@ async def on_reaction_add(reaction, user):
     global mapVote
     global playerList
     global alreadyVoted
-    global mapVotes
 
     global mapChoices
 
@@ -356,17 +353,6 @@ async def on_reaction_add(reaction, user):
 
                 await vMsg.edit(content="```Vote for your map!  When vote is stable, !lockmap\n" + printMapList() + toVoteString)
 
-def mapVoteOutput(mapChoice):
-    global mapChoices
-
-    votes = mapVotes[mapChoice]
-    numVotes = len(votes)
-    whoVoted = ", ".join([playerList[playerId] for playerId in votes])
-
-    if numVotes == 0:
-        return "0 votes"
-
-    return "%d votes (%s)" % (numVotes, whoVoted)
 
 @client.command(pass_context=True)
 async def lockmap(ctx):
@@ -429,7 +415,7 @@ async def lockmap(ctx):
 async def vote(ctx):
     global mapVote
     global playerList
-    global mapVotes
+    global mapChoices
 
     if mapVote == 1:
         playersVoted = [playerId for mapChoice in mapChoices for playerId in mapChoice.votes]
