@@ -3,7 +3,7 @@
         "schtop",
         "siege",
         "phantom_lg",
-        "raiden7_b11",
+        "raiden7",
         "shutdown2_lg",
         "2kfort5_lg",
         "stowaway2_lg",
@@ -12,7 +12,7 @@
     ],
     "tier2": [
         "stormz2_lg",
-        "opposition3_b5",
+        "opposition3",
         "monkey_lg",
         "alchimy_lg",
         "mortality_lg",
@@ -33,7 +33,7 @@
         "bases2k3",
         "chimkey_l",
         "well",
-        "piggy_b9",
-        "demolish_b5r"
+        "piggy",
+        "demolish_b6"
     ]
 }
