@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import asyncio
+import datetime
 import discord
 import json
 import os
@@ -10,6 +11,7 @@ import random
 from collections import deque
 from dotenv import load_dotenv
 from discord.ext import commands
+from discord.ext import tasks
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -45,6 +47,8 @@ playerList = {}
 pickupStarted = 0
 pickupActive = 0
 playerNumber = 8
+lastAdd = datetime.datetime.utcnow()
+lastAddCtx = None
 
 mapChoices = []
 
@@ -105,6 +109,8 @@ async def DePopulatePickup(ctx):
     blueTeam = []
     redTeam = []
     playerList = {}
+
+    idlecancel.stop()
 
     if ctx:
         await updateNick(ctx)
@@ -249,6 +255,8 @@ async def add(ctx, player: discord.Member=None):
     global vMsg
     global mapVote
     global previousMaps
+    global lastAdd
+    global lastAddCtx
 
     global mapChoices
 
@@ -260,11 +268,16 @@ async def add(ctx, player: discord.Member=None):
         playerName = player.display_name
         if playerId not in playerList:
             playerList[playerId] = playerName
+            lastAdd = datetime.datetime.utcnow()
+            idlecancel.start()
+            lastAddCtx = ctx
 
             if len(playerList) < playerNumber:
                 await printPlayerList(ctx)
             else:
                 pickupActive = 0
+                idlecancel.stop()
+
                 await printPlayerList(ctx)
                 await updateNick(ctx, "voting...")
 
@@ -290,6 +303,19 @@ async def add(ctx, player: discord.Member=None):
                     mentionString = mentionString + ("<@%s> " % playerId)
                 await ctx.send(mentionString)
 
+@tasks.loop(minutes=30)
+async def idlecancel():
+    global lastAdd
+    global lastAddCtx
+    global pickupActive
+    global mapVote
+
+    if pickupActive == 1 and pickupStarted == 1 and mapVote == 0:
+        # check if 3 hours since last add
+        lastAddDiff = datetime.datetime.utcnow() - lastAdd
+        if lastAddDiff.total_seconds() > (3 * 60 * 60):
+            await lastAddCtx.send("Pickup idle for more than three hours, canceling.")
+            await DePopulatePickup(lastAddCtx)
 
 @client.command(pass_context=True)
 async def remove(ctx):
