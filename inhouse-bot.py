@@ -312,8 +312,12 @@ async def idlecancel():
 
     if pickupActive == 1 and pickupStarted == 1 and mapVote == 0:
         # check if 3 hours since last add
-        lastAddDiff = datetime.datetime.utcnow() - lastAdd
-        if lastAddDiff.total_seconds() > (3 * 60 * 60):
+        lastAddDiff = (datetime.datetime.utcnow() - lastAdd).total_seconds()
+        print("last add was %d minutes ago" % (lastAddDiff / 60))
+
+        if lastAddDiff > (3 * 60 * 60):
+            print("stopping pickup")
+
             await lastAddCtx.send("Pickup idle for more than three hours, canceling.")
             await DePopulatePickup(lastAddCtx)
 
