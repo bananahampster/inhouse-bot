@@ -110,7 +110,8 @@ async def DePopulatePickup(ctx):
     redTeam = []
     playerList = {}
 
-    idlecancel.stop()
+    if idlecancel.is_running():
+        idlecancel.stop()
 
     if ctx:
         await updateNick(ctx)
@@ -269,14 +270,17 @@ async def add(ctx, player: discord.Member=None):
         if playerId not in playerList:
             playerList[playerId] = playerName
             lastAdd = datetime.datetime.utcnow()
-            idlecancel.start()
-            lastAddCtx = ctx
+
+            if not idlecancel.is_running():
+                idlecancel.start()
+                lastAddCtx = ctx
 
             if len(playerList) < playerNumber:
                 await printPlayerList(ctx)
             else:
                 pickupActive = 0
-                idlecancel.stop()
+                if idlecancel.is_running():
+                    idlecancel.stop()
 
                 await printPlayerList(ctx)
                 await updateNick(ctx, "voting...")
