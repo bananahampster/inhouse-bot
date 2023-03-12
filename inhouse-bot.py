@@ -55,13 +55,14 @@ mapChoices = []
 blueTeam = []
 redTeam = []
 alreadyVoted = []
-vMsg = None
+recentlyPlayedMapsMsg = None
 mapVote = 0
+mapVoteMessage = None
+mapVoteMessageView = None
 ordered = []
 mapsPicked = 0
 captains = []
 pickNum = 1
-
 
 class MapChoice:
     def __init__(self, mapName, decoration=None):
@@ -71,6 +72,28 @@ class MapChoice:
 
     ## maybe other voting methods here?
 
+async def HandleMapButtonCallback(self, interaction: discord.Interaction, button: discord.ui.Button):
+    global mapVoteMessage
+    if self is mapVoteMessageView:
+        processVote(interaction.user, int(button.label))
+        await interaction.response.edit_message(embed=GenerateMapVoteEmbed())
+
+class MapChoiceView(discord.ui.View):
+    @discord.ui.button(label="1", custom_id="map_1", style=discord.ButtonStyle.primary)
+    async def map_1_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await HandleMapButtonCallback(self, interaction, button)
+
+    @discord.ui.button(label="2", custom_id="map_2", style=discord.ButtonStyle.primary)
+    async def map_2_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await HandleMapButtonCallback(self, interaction, button)
+
+    @discord.ui.button(label="3", custom_id="map_3", style=discord.ButtonStyle.primary)
+    async def map_3_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await HandleMapButtonCallback(self, interaction, button)
+
+    @discord.ui.button(label="4", custom_id="map_4", style=discord.ButtonStyle.primary)
+    async def map_4_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await HandleMapButtonCallback(self, interaction, button)
 
 # @debounce(2)
 async def printPlayerList(ctx):
@@ -163,6 +186,7 @@ async def pickup(ctx):
     global mapList
     global playerNumber
     global previousMaps
+    global recentlyPlayedMapsMsg
 
     if pickupStarted == 0 and pickupActive == 0 and mapVote == 0 and mapsPicked == 0 and pickNum == 1:
         with open('maplist.json') as f:
@@ -175,6 +199,8 @@ async def pickup(ctx):
         DePopulatePickup
 
         pickupStarted = 1
+        recentlyPlayedMapsMsg = "Maps %s were recently played and are removed from voting." % ", ".join(previousMaps)
+
         await ctx.send("Pickup started. !add in 10 seconds")
         await updateNick(ctx, "starting...")
         await asyncio.sleep(5)
@@ -223,38 +249,55 @@ async def playernumber(ctx, numPlayers: int):
     else:
         await ctx.send("Can't set pickup to an odd number, too few, or too many players")
 
-def printMapList():
+def GenerateMapVoteEmbed():
     global mapChoices
+    global recentlyPlayedMapsMsg
 
-    mapString = ""
+    embed = discord.Embed(
+        title="Vote for your map!",
+        description=f"When vote is stable, !lockmap",
+        color=0x00FFFF
+    )
+
     emoji = ["1️⃣", "2️⃣", "3️⃣", "4️⃣"]
-
+    
     for i in range(len(mapChoices)):
         mapChoice = mapChoices[i]
+        mapName = mapChoice.mapName
+        decoration = mapChoice.decoration or ""
 
         votes = mapChoice.votes
         numVotes = len(votes)
         whoVoted = ", ".join([playerList[playerId] for playerId in votes])
+        whoVotedString = whoVoted
+        if len(whoVoted) > 0:
+            whoVotedString = "_" + whoVotedString + "_"
 
-        if numVotes == 0:
-            voteString = "0 votes"
+        if numVotes == 1:
+            voteCountString = "1 vote"
         else:
-            voteString = "%d votes (%s)" % (numVotes, whoVoted)
+            voteCountString = "%d votes" % (numVotes)
 
-        mapName = mapChoice.mapName
-        decoration = mapChoice.decoration or ""
-        mapString = mapString + "\n" + emoji[i] + " " + mapName + " " + decoration + " " * (25 - len(mapName) - 2 * len(decoration)) + voteString
+        embed.add_field(name="", value=emoji[i] + " `" + mapName + " " + decoration + (" " * (25 - len(mapName) - 2 * len(decoration))) + voteCountString + "`\n\u200B" + whoVotedString, inline=False)
 
-    return mapString
+    if recentlyPlayedMapsMsg != None:
+        embed.add_field(name="", value=recentlyPlayedMapsMsg, inline=False)
 
+    playersVoted = [playerId for mapChoice in mapChoices for playerId in mapChoice.votes]
+    playersAbstained = [playerList[playerId] for playerId in playerList.keys() if playerId not in playersVoted]
+    if len(playersAbstained) != 0 and len(playersAbstained) != len(playerList):
+        embed.add_field(name="", value="```💩 " + ", ".join(playersAbstained) +  " need" + ("s" if len(playersAbstained) == 1 else "") + " to vote 💩```", inline=False)
+
+    return embed
 
 @client.command(pass_context=True)
 async def add(ctx, player: discord.Member=None):
     global playerNumber
     global playerList
     global pickupActive
-    global vMsg
     global mapVote
+    global mapVoteMessage
+    global mapVoteMessageView
     global previousMaps
     global lastAdd
     global lastAddCtx
@@ -291,16 +334,11 @@ async def add(ctx, player: discord.Member=None):
                 PickMaps(True)
                 mapChoices.append(MapChoice("New Maps"))
 
-                vMsg = await ctx.send("```Vote for your map!  When vote is stable, !lockmap\n" + printMapList() + "```")
-
-                await vMsg.add_reaction("1️⃣")
-                await vMsg.add_reaction("2️⃣")
-                await vMsg.add_reaction("3️⃣")
-                await vMsg.add_reaction("4️⃣")
-
                 mapVote = 1
 
-                await ctx.send("Maps %s were recently played and are removed from voting." % ", ".join(previousMaps))
+                embed = GenerateMapVoteEmbed()
+                mapVoteMessageView = MapChoiceView()
+                mapVoteMessage = await ctx.send(embed=embed, view=mapVoteMessageView)
 
                 mentionString = ""
                 for playerId in playerList.keys():
@@ -352,54 +390,36 @@ async def teams(ctx):
     else:
         await printPlayerList(ctx)
 
-@client.event
-async def on_reaction_add(reaction, user):
+
+def processVote(player: discord.Member=None, vote=None):
     global mapVote
     global playerList
     global alreadyVoted
 
     global mapChoices
 
-    #print(reaction.author.display_name)
-    if((reaction.message.channel.name == CHANNEL_NAME) and (mapVote == 1) and (user.display_name != "inhouse-bot")):
-        if((reaction.emoji == '1️⃣') or (reaction.emoji == '2️⃣') or (reaction.emoji == '3️⃣') or (reaction.emoji == '4️⃣')):
-            if(user.id in playerList):
-                # remove any existing votes
-                for mapChoice in mapChoices:
-                    if(user.id in mapChoice.votes):
-                        mapChoice.votes.remove(user.id)
+    if player.id in playerList:
+        # remove any existing votes
+        for mapChoice in mapChoices:
+            if(player.id in mapChoice.votes):
+                mapChoice.votes.remove(player.id)
 
-                # add new votes
-                if(reaction.emoji == '1️⃣'):
-                    mapChoices[0].votes.append(user.id)
-                if(reaction.emoji == '2️⃣'):
-                    mapChoices[1].votes.append(user.id)
-                if(reaction.emoji == '3️⃣'):
-                    mapChoices[2].votes.append(user.id)
-                if(reaction.emoji == '4️⃣'):
-                    mapChoices[3].votes.append(user.id)
-
-                playersVoted = [playerId for mapChoice in mapChoices for playerId in mapChoice.votes]
-                playersAbstained = [playerList[playerId] for playerId in playerList.keys() if playerId not in playersVoted]
-                toVoteString = "```"
-                if len(playersAbstained) != 0:
-                    toVoteString = "\n💩 " + ", ".join(playersAbstained) +  " need to vote 💩```"
-
-                await vMsg.edit(content="```Vote for your map!  When vote is stable, !lockmap\n" + printMapList() + toVoteString)
-
+        mapChoices[vote - 1].votes.append(player.id)
 
 @client.command(pass_context=True)
 async def lockmap(ctx):
     global mapsPicked
     global mapVote
+    global mapVoteMessage
+    global mapVoteMessageView
 
     global mapChoices
 
-    global vMsg
     global mapList
     global blueTeam
     global redTeam
     global previousMaps
+    global recentlyPlayedMapsMsg
 
     rankedVotes = []
     highestVote = 0
@@ -417,6 +437,10 @@ async def lockmap(ctx):
             await ctx.send("!lockmap denied; no votes were cast.")
             return
 
+        # Hide voting buttons now that the vote is complete.
+        mapVoteMessageView = None
+        await mapVoteMessage.edit(view=None)
+
         winningMaps = [pickedMap for (pickedMap, votes) in rankedVotes if votes == highestVote]
 
         # don't allow "New Maps" to win
@@ -430,13 +454,15 @@ async def lockmap(ctx):
             carryOverMap = random.choice([pickedMap for (pickedMap, votes) in rankedVotes if votes == rankedVotes[1][1] and pickedMap != "New Maps"])
             mapChoices.append(MapChoice(carryOverMap, "🔁"))
 
-            vMsg = await ctx.send("```Vote for your map!  When vote is stable, !lockmap\n" + printMapList() + "```")
+            recentlyPlayedMapsMsg = None
+            embed = GenerateMapVoteEmbed()
+            mapVoteMessageView = MapChoiceView()
 
-            await vMsg.add_reaction("1️⃣")
-            await vMsg.add_reaction("2️⃣")
-            await vMsg.add_reaction("3️⃣")
-            await vMsg.add_reaction("4️⃣")
+            mapVoteMessage = await ctx.send(embed=embed, view=mapVoteMessageView)
         else:
+            mapVoteMessage = None
+            mapVoteMessageView = None
+
             mapVote = 0
             RecordMapAndTeams(winningMap)
 
