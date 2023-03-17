@@ -16,8 +16,7 @@ from discord.ext import tasks
 intents = discord.Intents.default()
 intents.message_content = True
 
-client = commands.Bot(command_prefix = "!", case_insensitive=True, intents=intents)
-client.remove_command('help')
+client = commands.Bot(command_prefix = ["!", "+", "-"], help_command=None, case_insensitive=True, intents=intents)
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -290,8 +289,18 @@ def GenerateMapVoteEmbed():
 
     return embed
 
+@client.command(pass_context=True, name="+")
+async def plusPlus(ctx):
+    if ctx.prefix == "+":
+        await add(ctx)
+
+@client.command(pass_context=True, name="-")
+async def minusMinus(ctx):
+    if ctx.prefix == "-":
+        await remove(ctx)
+
 @client.command(pass_context=True)
-async def add(ctx, player: discord.Member=None):
+async def add(ctx):
     global playerNumber
     global playerList
     global pickupActive
@@ -304,7 +313,6 @@ async def add(ctx, player: discord.Member=None):
 
     global mapChoices
 
-    # if player is None:
     player = ctx.author
 
     if pickupActive == 1 and ctx.channel.name == 'tfc-pickup-na':
@@ -406,7 +414,7 @@ def processVote(player: discord.Member=None, vote=None):
 
         mapChoices[vote - 1].votes.append(player.id)
 
-@client.command(pass_context=True)
+@client.command(pass_context=True, aliases=["fv"])
 async def lockmap(ctx):
     global mapsPicked
     global mapVote
