@@ -39,6 +39,7 @@ if os.path.exists('prevteams.json'):
 else:
     previousTeam = []
 
+emoji = ["1️⃣", "2️⃣", "3️⃣", "4️⃣"]
 mapList = []
 
 msgList = []
@@ -74,25 +75,29 @@ class MapChoice:
 async def HandleMapButtonCallback(self, interaction: discord.Interaction, button: discord.ui.Button):
     global mapVoteMessage
     if self is mapVoteMessageView:
-        processVote(interaction.user, int(button.label))
+        processVote(interaction.user, int(button.custom_id))
         await interaction.response.edit_message(embed=GenerateMapVoteEmbed())
 
 class MapChoiceView(discord.ui.View):
-    @discord.ui.button(label="1", custom_id="map_1", style=discord.ButtonStyle.primary)
-    async def map_1_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await HandleMapButtonCallback(self, interaction, button)
+    def __init__(self, mapChoices):
+        super().__init__()
+        self.addButtons()
 
-    @discord.ui.button(label="2", custom_id="map_2", style=discord.ButtonStyle.primary)
-    async def map_2_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await HandleMapButtonCallback(self, interaction, button)
+    def addButtons(self):
+        global emoji
+        for idx, mapChoice in enumerate(mapChoices):
+            self.add_item(self.createButton(label=f"{emoji[idx]} {mapChoice.mapName}", custom_id=f"{idx + 1}"))
 
-    @discord.ui.button(label="3", custom_id="map_3", style=discord.ButtonStyle.primary)
-    async def map_3_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await HandleMapButtonCallback(self, interaction, button)
+    def createButton(self, label, custom_id):
+        button = discord.ui.Button(label=label, custom_id=custom_id)
 
-    @discord.ui.button(label="4", custom_id="map_4", style=discord.ButtonStyle.primary)
-    async def map_4_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await HandleMapButtonCallback(self, interaction, button)
+        async def mapButtonCallback(interaction: discord.Interaction):
+            await HandleMapButtonCallback(self, interaction, button)
+
+        button.callback = mapButtonCallback
+        return button
+
+
 
 # @debounce(2)
 async def printPlayerList(ctx):
@@ -249,6 +254,7 @@ async def playernumber(ctx, numPlayers: int):
         await ctx.send("Can't set pickup to an odd number, too few, or too many players")
 
 def GenerateMapVoteEmbed():
+    global emoji
     global mapChoices
     global recentlyPlayedMapsMsg
 
@@ -257,8 +263,6 @@ def GenerateMapVoteEmbed():
         description=f"When vote is stable, !lockmap",
         color=0x00FFFF
     )
-
-    emoji = ["1️⃣", "2️⃣", "3️⃣", "4️⃣"]
     
     for i in range(len(mapChoices)):
         mapChoice = mapChoices[i]
@@ -345,7 +349,7 @@ async def add(ctx):
                 mapVote = 1
 
                 embed = GenerateMapVoteEmbed()
-                mapVoteMessageView = MapChoiceView()
+                mapVoteMessageView = MapChoiceView(mapChoices)
                 mapVoteMessage = await ctx.send(embed=embed, view=mapVoteMessageView)
 
                 mentionString = ""
@@ -464,7 +468,7 @@ async def lockmap(ctx):
 
             recentlyPlayedMapsMsg = None
             embed = GenerateMapVoteEmbed()
-            mapVoteMessageView = MapChoiceView()
+            mapVoteMessageView = MapChoiceView(mapChoices)
 
             mapVoteMessage = await ctx.send(embed=embed, view=mapVoteMessageView)
         else:
