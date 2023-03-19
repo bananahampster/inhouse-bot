@@ -42,27 +42,20 @@ else:
 emoji = ["1️⃣", "2️⃣", "3️⃣", "4️⃣"]
 mapList = []
 
-msgList = []
 playerList = {}
-pickupStarted = 0
-pickupActive = 0
+pickupStarted = False
+pickupActive = False
 playerNumber = 8
 lastAdd = datetime.datetime.utcnow()
 lastAddCtx = None
 
 mapChoices = []
 
-blueTeam = []
-redTeam = []
-alreadyVoted = []
 recentlyPlayedMapsMsg = None
-mapVote = 0
+mapVote = False
 mapVoteMessage = None
 mapVoteMessageView = None
-ordered = []
-mapsPicked = 0
-captains = []
-pickNum = 1
+nextCancelConfirms = False
 
 class MapChoice:
     def __init__(self, mapName, decoration=None):
@@ -114,27 +107,13 @@ async def DePopulatePickup(ctx):
     global pickupStarted
     global pickupActive
     global playerNumber
-    global mapsPicked
     global mapVote
-    global msgList
     global playerList
-    global blueTeam
-    global redTeam
-    global ordered
-    global captains
-    global pickNum
 
-    ordered = []
-    pickNum = 1
-    captains = []
-    mapVote = 0
-    mapsPicked = 0
-    pickupStarted = 0
-    pickupActive = 0
+    mapVote = False
+    pickupStarted = False
+    pickupActive = False
     playerNumber = 8
-    msgList = []
-    blueTeam = []
-    redTeam = []
     playerList = {}
 
     if idlecancel.is_running():
@@ -186,13 +165,13 @@ async def pickup(ctx):
     global pickupStarted
     global pickupActive
     global mapVote
-    global mapsPicked
     global mapList
     global playerNumber
     global previousMaps
     global recentlyPlayedMapsMsg
+    global nextCancelConfirms
 
-    if pickupStarted == 0 and pickupActive == 0 and mapVote == 0 and mapsPicked == 0 and pickNum == 1:
+    if pickupStarted == False and pickupActive == False and mapVote == False:
         with open('maplist.json') as f:
             mapList = json.load(f)
             for prevMap in previousMaps:
@@ -202,7 +181,8 @@ async def pickup(ctx):
 
         DePopulatePickup
 
-        pickupStarted = 1
+        pickupStarted = True
+        nextCancelConfirms = False
         recentlyPlayedMapsMsg = "Maps %s were recently played and are removed from voting." % ", ".join(previousMaps)
 
         await ctx.send("Pickup started. !add in 10 seconds")
@@ -211,8 +191,8 @@ async def pickup(ctx):
         await ctx.send("!add in 5 seconds")
         await asyncio.sleep(5)
 
-        if pickupStarted == 1:
-            pickupActive = 1
+        if pickupStarted == True:
+            pickupActive = True
             await ctx.send("!add enabled")
             await printPlayerList(ctx)
         else:
@@ -223,14 +203,15 @@ async def cancel(ctx):
     global pickupStarted
     global pickupActive
     global mapVote
+    global nextCancelConfirms
 
-    if mapVote != 0:
+    if mapVote != False and not nextCancelConfirms:
         await ctx.send("You're still picking maps, still wanna cancel?")
-        mapVote = 0
+        nextCancelConfirms = True
         return
-    if pickupStarted == 1 or pickupActive == 1:
-        pickupStarted = 0
-        pickupActive = 0
+    if pickupStarted == True or pickupActive == True:
+        pickupStarted = False
+        pickupActive = False
         await ctx.send("Pickup canceled.")
         await DePopulatePickup(ctx)
     else:
@@ -319,7 +300,7 @@ async def add(ctx):
 
     player = ctx.author
 
-    if pickupActive == 1 and ctx.channel.name == 'tfc-pickup-na':
+    if pickupActive == True and ctx.channel.name == 'tfc-pickup-na':
         playerId = player.id
         playerName = player.display_name
         if playerId not in playerList:
@@ -333,7 +314,7 @@ async def add(ctx):
             if len(playerList) < playerNumber:
                 await printPlayerList(ctx)
             else:
-                pickupActive = 0
+                pickupActive = False
                 if idlecancel.is_running():
                     idlecancel.stop()
 
@@ -346,7 +327,7 @@ async def add(ctx):
                 PickMaps(True)
                 mapChoices.append(MapChoice("New Maps"))
 
-                mapVote = 1
+                mapVote = True
 
                 embed = GenerateMapVoteEmbed()
                 mapVoteMessageView = MapChoiceView(mapChoices)
@@ -364,7 +345,7 @@ async def idlecancel():
     global pickupActive
     global mapVote
 
-    if pickupActive == 1 and pickupStarted == 1 and mapVote == 0:
+    if pickupActive == True and pickupStarted == True and mapVote == False:
         # check if 3 hours since last add
         lastAddDiff = (datetime.datetime.utcnow() - lastAdd).total_seconds()
         print("last add was %d minutes ago" % (lastAddDiff / 60))
@@ -380,7 +361,7 @@ async def remove(ctx):
     global playerList
     global pickupActive
 
-    if(pickupActive == 1):
+    if(pickupActive == True):
         if ctx.author.id in playerList:
             del playerList[ctx.author.id]
             await printPlayerList(ctx)
@@ -397,7 +378,7 @@ async def kick(ctx, player: discord.User):
 
 @client.command(pass_context=True)
 async def teams(ctx):
-    if pickupStarted == 0:
+    if pickupStarted == False:
         ctx.send("No pickup active.")
     else:
         await printPlayerList(ctx)
@@ -406,7 +387,6 @@ async def teams(ctx):
 def processVote(player: discord.Member=None, vote=None):
     global mapVote
     global playerList
-    global alreadyVoted
 
     global mapChoices
 
@@ -420,7 +400,6 @@ def processVote(player: discord.Member=None, vote=None):
 
 @client.command(pass_context=True, aliases=["fv"])
 async def lockmap(ctx):
-    global mapsPicked
     global mapVote
     global mapVoteMessage
     global mapVoteMessageView
@@ -428,16 +407,17 @@ async def lockmap(ctx):
     global mapChoices
 
     global mapList
-    global blueTeam
-    global redTeam
     global previousMaps
     global recentlyPlayedMapsMsg
+    global nextCancelConfirms
 
     rankedVotes = []
     highestVote = 0
     winningMap = " "
 
-    if(mapVote == 1):
+    if(mapVote == True):
+        nextCancelConfirms = False
+
         # get top maps
         mapTally = [(mapChoice.mapName, len(mapChoice.votes)) for mapChoice in mapChoices]
         rankedVotes = sorted(mapTally, key=lambda e: e[1], reverse=True)
@@ -475,7 +455,7 @@ async def lockmap(ctx):
             mapVoteMessage = None
             mapVoteMessageView = None
 
-            mapVote = 0
+            mapVote = False
             RecordMapAndTeams(winningMap)
 
             await ctx.send("The winning map is: " + winningMap)
@@ -489,7 +469,7 @@ async def vote(ctx):
     global playerList
     global mapChoices
 
-    if mapVote == 1:
+    if mapVote == True:
         playersVoted = [playerId for mapChoice in mapChoices for playerId in mapChoice.votes]
         playersAbstained = [playerId for playerId in playerList.keys() if playerId not in playersVoted]
 
@@ -504,7 +484,7 @@ async def lockset(ctx, mapToLockset):
     global pickupActive
     global mapVote
 
-    if pickupActive != 0 and mapVote != 1:
+    if pickupActive != False and mapVote != False:
         await ctx.send("Error: can only !lockset during map voting or if no pickup is active (changes the map for the last pickup)")
         return
 
