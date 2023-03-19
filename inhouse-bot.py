@@ -203,6 +203,7 @@ async def cancel(ctx):
     global pickupStarted
     global pickupActive
     global mapVote
+    global mapVoteMessage
     global nextCancelConfirms
 
     if mapVote != False and not nextCancelConfirms:
@@ -212,6 +213,7 @@ async def cancel(ctx):
     if pickupStarted == True or pickupActive == True:
         pickupStarted = False
         pickupActive = False
+        await mapVoteMessage.edit(view=None)
         await ctx.send("Pickup canceled.")
         await DePopulatePickup(ctx)
     else:
