@@ -213,7 +213,9 @@ async def cancel(ctx):
     if pickupStarted == True or pickupActive == True:
         pickupStarted = False
         pickupActive = False
-        await mapVoteMessage.edit(view=None)
+        if mapVoteMessage is not None:
+            await mapVoteMessage.edit(view=None)
+            mapVoteMessage = None
         await ctx.send("Pickup canceled.")
         await DePopulatePickup(ctx)
     else:
