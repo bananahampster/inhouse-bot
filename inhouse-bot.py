@@ -171,7 +171,7 @@ async def pickup(ctx):
     global recentlyPlayedMapsMsg
     global nextCancelConfirms
 
-    if pickupStarted == False and pickupActive == False and mapVote == False:
+    if pickupStarted == False and pickupActive == False and mapVote == False and ctx.channel.name == CHANNEL_NAME:
         with open('maplist.json') as f:
             mapList = json.load(f)
             for prevMap in previousMaps:
@@ -225,6 +225,9 @@ async def cancel(ctx):
 async def playernumber(ctx, numPlayers: int):
     global playerNumber
 
+    if ctx.channel.name != CHANNEL_NAME:
+        return
+
     try:
         players = int(numPlayers)
     except:
@@ -248,7 +251,7 @@ def GenerateMapVoteEmbed():
         description=f"When vote is stable, !lockmap",
         color=0x00FFFF
     )
-    
+
     for i in range(len(mapChoices)):
         mapChoice = mapChoices[i]
         mapName = mapChoice.mapName
@@ -304,7 +307,7 @@ async def add(ctx):
 
     player = ctx.author
 
-    if pickupActive == True and ctx.channel.name == 'tfc-pickup-na':
+    if pickupActive == True and ctx.channel.name == CHANNEL_NAME:
         playerId = player.id
         playerName = player.display_name
         if playerId not in playerList:
@@ -365,7 +368,7 @@ async def remove(ctx):
     global playerList
     global pickupActive
 
-    if(pickupActive == True):
+    if pickupActive == True and ctx.channel.name == CHANNEL_NAME:
         if ctx.author.id in playerList:
             del playerList[ctx.author.id]
             await printPlayerList(ctx)
@@ -382,6 +385,9 @@ async def kick(ctx, player: discord.User):
 
 @client.command(pass_context=True)
 async def teams(ctx):
+    if ctx.channel.name != CHANNEL_NAME:
+        return
+
     if pickupStarted == False:
         ctx.send("No pickup active.")
     else:
@@ -414,6 +420,9 @@ async def lockmap(ctx):
     global previousMaps
     global recentlyPlayedMapsMsg
     global nextCancelConfirms
+
+    if ctx.channel.name != CHANNEL_NAME:
+        return
 
     rankedVotes = []
     highestVote = 0
@@ -473,7 +482,7 @@ async def vote(ctx):
     global playerList
     global mapChoices
 
-    if mapVote == True:
+    if mapVote == True and ctx.channel.name == CHANNEL_NAME:
         playersVoted = [playerId for mapChoice in mapChoices for playerId in mapChoice.votes]
         playersAbstained = [playerId for playerId in playerList.keys() if playerId not in playersVoted]
 
@@ -487,6 +496,9 @@ async def lockset(ctx, mapToLockset):
     global previousMaps
     global pickupActive
     global mapVote
+
+    if ctx.channel.name != CHANNEL_NAME:
+        return
 
     if pickupActive != False and mapVote != False:
         await ctx.send("Error: can only !lockset during map voting or if no pickup is active (changes the map for the last pickup)")
@@ -502,6 +514,9 @@ async def lockset(ctx, mapToLockset):
 
 @client.command(pass_context=True)
 async def timeleft(ctx):
+    if ctx.channel.name != CHANNEL_NAME:
+        return
+
     # construct a UDP packet and send it to the server
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.sendto("BOT_MSG@TIMELEFT@".encode(), (SERVER_IP, int(SERVER_PORT)))
