@@ -374,7 +374,7 @@ async def remove(ctx):
             await printPlayerList(ctx)
 
 @client.command(pass_context=True)
-@commands.has_role('ops')
+@commands.has_role('admin')
 async def kick(ctx, player: discord.User):
     global playerList
 
@@ -541,7 +541,7 @@ async def stats(ctx):
         await ctx.send('Stats: %s' % prevlog['site'])
 
 @client.command(pass_context=True)
-@commands.has_role('ops')
+@commands.has_role('admin')
 async def forcestats(ctx):
     print("forcestats -- channel name" + ctx.channel.name)
     if ctx.channel.name == 'illuminati':
