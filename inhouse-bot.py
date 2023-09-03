@@ -544,7 +544,7 @@ async def stats(ctx):
 @commands.has_role('admin')
 async def forcestats(ctx):
     print("forcestats -- channel name" + ctx.channel.name)
-    if ctx.channel.name == 'illuminati':
+    if ctx.channel.name == 'moderator-only':
         await ctx.send("force-parsing stats; wait 5 sec...")
 
         with open('prevlog.json', 'w') as f:
