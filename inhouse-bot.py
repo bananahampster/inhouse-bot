@@ -578,7 +578,7 @@ async def tfcmap(ctx, map):
         if len(matches) != 0:
             await ctx.send("Found map: http://mrclan.com/tfcmaps/%s.zip" % (map))
         else:
-            await ctx.send("Didn't find specified map. [All maps are here](http://mrclan.com/tfcmaps/)")
+            await ctx.send("Didn't find specified map. [All known maps are here](http://mrclan.com/tfcmaps/).")
 
 @client.command(pass_context=True)
 async def server(ctx):
