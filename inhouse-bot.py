@@ -391,7 +391,7 @@ async def teams(ctx):
         return
 
     if pickupStarted == False:
-        ctx.send("No pickup active.")
+        await ctx.send("No pickup active.")
     else:
         await printPlayerList(ctx)
 
@@ -571,14 +571,14 @@ async def logs(ctx):
 
 @client.command(pass_context=True)
 async def tfcmap(ctx, map):
+    map = map.lower()
     with urllib.request.urlopen(r"http://mrclan.com/tfcmaps/") as mapIndex:
         response = mapIndex.read().decode("utf-8")
         matches = re.findall('<a href="/tfcmaps/%s.zip' % (map), response, re.I)
         if len(matches) != 0:
             await ctx.send("Found map: http://mrclan.com/tfcmaps/%s.zip" % (map))
         else:
-            await ctx.send("Didn't find map, did you spell it right?")
-            await ctx.send("All maps: http://mrclan.com/tfcmaps/")
+            await ctx.send("Didn't find specified map. [All maps are here](http://mrclan.com/tfcmaps/)")
 
 @client.command(pass_context=True)
 async def server(ctx):
