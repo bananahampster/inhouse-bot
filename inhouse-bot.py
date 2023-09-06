@@ -5,8 +5,10 @@ import datetime
 import discord
 import json
 import os
-import socket
 import random
+import re
+import socket
+import urllib.request
 
 from collections import deque
 from dotenv import load_dotenv
@@ -568,8 +570,15 @@ async def logs(ctx):
     await ctx.send("Logs: http://inhouse.site.nfoservers.com/akw/")
 
 @client.command(pass_context=True)
-async def tfcmap(ctx):
-    await ctx.send("Maps: http://mrclan.com/tfcmaps/?C=N;O=A")
+async def tfcmap(ctx, map):
+    with urllib.request.urlopen(r"http://mrclan.com/tfcmaps/") as mapIndex:
+        response = mapIndex.read().decode("utf-8")
+        matches = re.findall('<a href="/tfcmaps/%s.zip' % (map), response, re.I)
+        if len(matches) != 0:
+            await ctx.send("Found map: http://mrclan.com/tfcmaps/%s.zip" % (map))
+        else:
+            await ctx.send("Didn't find map, did you spell it right?")
+            await ctx.send("All maps: http://mrclan.com/tfcmaps/")
 
 @client.command(pass_context=True)
 async def server(ctx):
