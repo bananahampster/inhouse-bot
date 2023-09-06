@@ -475,7 +475,7 @@ async def lockmap(ctx):
 
             await ctx.send("The winning map is: " + winningMap)
             await ctx.send("🎉🎉 JOIN INHOUSE YA HOSERS 🎉🎉")
-            await ctx.send("[inhouse server join LINK](steam://connect/104.153.105.235:27015/%s)" % SERVER_PASSWORD)
+            await ctx.send("steam://connect/104.153.105.235:27015/" + SERVER_PASSWORD)
             await DePopulatePickup(ctx)
 
 @client.command(pass_context=True)
@@ -582,7 +582,7 @@ async def tfcmap(ctx, map):
 
 @client.command(pass_context=True)
 async def server(ctx):
-    await ctx.send("[inhouse server join LINK](steam://connect/104.153.105.235:27015/%s)" % SERVER_PASSWORD)
+    await ctx.send("steam://connect/104.153.105.235:27015/%s" % SERVER_PASSWORD)
 
 @client.command(pass_context=True)
 async def teamz(ctx):
