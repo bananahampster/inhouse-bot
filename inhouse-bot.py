@@ -130,16 +130,44 @@ def PickMaps(initial=False):
     global mapChoices
 
     mapChoices = []
-    for i in range(3):
-        if i == 0 or (i == 1 and not initial):
-            mapname = random.choice(mapList["tier1"])
-            mapList["tier1"].remove(mapname)
-            mapChoices.append(MapChoice(mapname, "🌟"))
-        else:
-            mapname = random.choice(mapList["tier2"])
-            mapList["tier2"].remove(mapname)
-            mapChoices.append(MapChoice(mapname))
+    if initial:
+        for i in range(3):
+            if i == 0:
+                mapname = random.choice(mapList["tier1"] + mapList["tier2"])
+                RemoveMap(mapname)
+                mapChoices.append(MapChoice(mapname, "⭐"))
+            elif i == 1:
+                mapname = random.choice(mapList["tier2"] + mapList["tier3"])
+                RemoveMap(mapname)
+                mapChoices.append(MapChoice(mapname))
+            elif i == 2:
+                mapname = random.choice(mapList["tier3"])
+                RemoveMap(mapname)
+                mapChoices.append(MapChoice(mapname))
+    else:
+        for i in range(3):
+            if i == 0:
+                mapname = random.choice(mapList["tier1"])
+                RemoveMap(mapname)
+                mapChoices.append(MapChoice(mapname, "✨"))
+            elif i == 1:
+                mapname = random.choice(mapList["tier1"] + mapList["tier2"])
+                RemoveMap(mapname)
+                mapChoices.append(MapChoice(mapname, "⭐"))
+            elif i == 2:
+                mapname = random.choice(mapList["tier2"])
+                RemoveMap(mapname)
+                mapChoices.append(MapChoice(mapname))
 
+def RemoveMap(givenMap):
+    global mapList
+
+    if givenMap in mapList['tier1']:
+        mapList['tier1'].remove(givenMap)
+    elif givenMap in mapList['tier2']:
+        mapList['tier2'].remove(givenMap)
+    elif givenMap in mapList['tier3']:
+        mapList['tier3'].remove(givenMap)
 
 def RecordMapAndTeams(winningMap):
     global previousMaps
