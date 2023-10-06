@@ -4,7 +4,7 @@
         "phantom_lg",
         "raiden8",
         "schtop",
-        "shutdown2_lg",
+        "shutdown2_lg2",
         "stowaway2_lg"
     ],
     "tier2": [
@@ -42,7 +42,8 @@
         "ss_shortcut",
         "stormz2_lg",
         "torch2",
-        "turbo_b10",
+        "turbo",
+        "turbowave_a4",
         "waterwar",
         "well2023_b2",
         "welldown_b7"
