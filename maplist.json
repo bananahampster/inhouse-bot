@@ -23,12 +23,12 @@
         "voltage_lg"
     ],
     "tier3": [
+        "ameliorate",
         "bases2k3",
         "bf_ssb",
         "ceasefire",
         "chemflow",
         "chimkey_lg",
-        "cranked",
         "crossover2",
         "hammer2",
         "mastodon",
@@ -37,7 +37,6 @@
         "oppose2k1_lowgrens",
         "orbit_l3",
         "roasted_lg",
-        "serenity_r",
         "sigma_lowgrens",
         "ss_shortcut",
         "stormz2_lg",
