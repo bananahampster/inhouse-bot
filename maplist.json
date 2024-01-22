@@ -1,11 +1,11 @@
 {
     "tier1": [
-        "demolish_rb3",
+        "demolish_r",
         "phantom_lg",
         "raiden8",
         "schtop",
         "shutdown2_lg2",
-        "stowaway2_lg"
+        "stowaway2_lg2"
     ],
     "tier2": [
         "2kfort5_lg",
@@ -23,17 +23,17 @@
         "voltage_lg"
     ],
     "tier3": [
-        "ameliorate",
+        "ameliorate_b5",
         "bases2k3",
         "bf_ssb",
         "ceasefire",
         "chemflow",
         "chimkey_lg",
-        "crossover2",
+        "crossover2k24",
         "entomb_b13",
         "mulch_trench_lg",
         "nyx_rb4",
-        "oppose2k1_lowgrens",
+        "oppose2k24",
         "orbit_l3",
         "roasted_lg",
         "sigma_lowgrens",
