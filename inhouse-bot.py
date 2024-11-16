@@ -133,15 +133,15 @@ def PickMaps(initial=False):
     if initial:
         for i in range(3):
             if i == 0:
-                mapname = random.choice(mapList["tier1"] + mapList["tier2"])
+                mapname = random.choice(mapList["tier1"])
                 RemoveMap(mapname)
                 mapChoices.append(MapChoice(mapname, "⭐"))
             elif i == 1:
-                mapname = random.choice(mapList["tier2"] + mapList["tier3"])
+                mapname = random.choice(mapList["tier1"] + mapList["tier2"])
                 RemoveMap(mapname)
                 mapChoices.append(MapChoice(mapname))
             elif i == 2:
-                mapname = random.choice(mapList["tier3"])
+                mapname = random.choice(mapList["tier2"] + mapList["tier3"])
                 RemoveMap(mapname)
                 mapChoices.append(MapChoice(mapname))
     else:
