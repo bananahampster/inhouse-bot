@@ -503,7 +503,7 @@ async def lockmap(ctx):
 
             await ctx.send("The winning map is: " + winningMap)
             await ctx.send("🎉🎉 JOIN INHOUSE YA HOSERS 🎉🎉")
-            await ctx.send("steam://connect/" + SERVER_IP + "/" + SERVER_PASSWORD)
+            await ctx.send("steam://connect/" + SERVER_IP + ":27015/" + SERVER_PASSWORD)
             await DePopulatePickup(ctx)
 
 @client.command(pass_context=True)
