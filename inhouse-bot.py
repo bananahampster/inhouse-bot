@@ -18,7 +18,7 @@ from discord.ext import tasks
 intents = discord.Intents.default()
 intents.message_content = True
 
-client = commands.Bot(command_prefix = ["!", "+", "-"], help_command=None, case_insensitive=True, intents=intents)
+client = commands.Bot(command_prefix = ["!", "+", "-", "nice "], help_command=None, case_insensitive=True, intents=intents)
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
