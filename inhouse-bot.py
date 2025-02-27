@@ -201,6 +201,10 @@ async def pickup(ctx):
     global recentlyPlayedMapsMsg
     global nextCancelConfirms
 
+    if ctx.prefix == "nice ":
+        await add(ctx)
+        return
+
     if pickupStarted == False and pickupActive == False and mapVote == False and ctx.channel.name == CHANNEL_NAME:
         with open('maplist.json') as f:
             mapList = json.load(f)
