@@ -469,6 +469,8 @@ async def lockmap(ctx):
         mapTally = [(mapChoice.mapName, len(mapChoice.votes)) for mapChoice in mapChoices]
         rankedVotes = sorted(mapTally, key=lambda e: e[1], reverse=True)
 
+        print(rankedVotes)
+
         highestVote = rankedVotes[0][1]
 
         # don't allow lockmap if no votes were cast
