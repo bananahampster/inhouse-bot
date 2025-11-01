@@ -129,15 +129,20 @@ def PickMaps(initial=False):
     global mapList
     global mapChoices
 
+    # it is possible that no tier1 maps are left if the number of tier1 maps is less than 8
+    firstTier = mapList["tier1"]
+    if len(firstTier) == 0:
+        firstTier = mapList["tier2"]
+
     mapChoices = []
     if initial:
         for i in range(3):
             if i == 0:
-                mapname = random.choice(mapList["tier1"])
+                mapname = random.choice(firstTier)
                 RemoveMap(mapname)
                 mapChoices.append(MapChoice(mapname, "⭐"))
             elif i == 1:
-                mapname = random.choice(mapList["tier1"] + mapList["tier2"])
+                mapname = random.choice(firstTier + mapList["tier2"])
                 RemoveMap(mapname)
                 mapChoices.append(MapChoice(mapname))
             elif i == 2:
@@ -147,11 +152,11 @@ def PickMaps(initial=False):
     else:
         for i in range(3):
             if i == 0:
-                mapname = random.choice(mapList["tier1"])
+                mapname = random.choice(firstTier)
                 RemoveMap(mapname)
                 mapChoices.append(MapChoice(mapname, "✨"))
             elif i == 1:
-                mapname = random.choice(mapList["tier1"] + mapList["tier2"])
+                mapname = random.choice(firstTier + mapList["tier2"])
                 RemoveMap(mapname)
                 mapChoices.append(MapChoice(mapname, "⭐"))
             elif i == 2:
@@ -190,6 +195,28 @@ async def updateNick(ctx, status=None):
 
     await ctx.message.guild.me.edit(nick=status)
 
+def resetMaps(): 
+    global mapList
+    global previousMaps
+
+    with open('maplist.json') as f:
+        mapList = json.load(f)
+        for prevMap in previousMaps:
+            for tier in mapList.values():
+                if prevMap in tier:
+                    tier.remove(prevMap)
+
+async def sendMapEmbed(ctx):
+    global mapChoices
+    global mapVoteMessage
+    global mapVoteMessageView
+
+    embed = GenerateMapVoteEmbed()
+    mapVoteMessageView = MapChoiceView(mapChoices)
+    mapVoteMessage = await ctx.send(embed=embed, view=mapVoteMessageView)
+
+    return mapVoteMessageView
+
 @client.command(pass_context=True)
 async def pickup(ctx):
     global pickupStarted
@@ -206,14 +233,8 @@ async def pickup(ctx):
         return
 
     if pickupStarted == False and pickupActive == False and mapVote == False and ctx.channel.name == CHANNEL_NAME:
-        with open('maplist.json') as f:
-            mapList = json.load(f)
-            for prevMap in previousMaps:
-                for tier in mapList.values():
-                    if prevMap in tier:
-                        tier.remove(prevMap)
-
-        DePopulatePickup
+        resetMaps()
+        await DePopulatePickup(ctx)
 
         pickupStarted = True
         nextCancelConfirms = False
@@ -331,12 +352,8 @@ async def add(ctx):
     global playerList
     global pickupActive
     global mapVote
-    global mapVoteMessage
-    global mapVoteMessageView
-    global previousMaps
     global lastAdd
     global lastAddCtx
-
     global mapChoices
 
     player = ctx.author
@@ -369,10 +386,7 @@ async def add(ctx):
                 mapChoices.append(MapChoice("New Maps"))
 
                 mapVote = True
-
-                embed = GenerateMapVoteEmbed()
-                mapVoteMessageView = MapChoiceView(mapChoices)
-                mapVoteMessage = await ctx.send(embed=embed, view=mapVoteMessageView)
+                await sendMapEmbed(ctx)
 
                 mentionString = ""
                 for playerId in playerList.keys():
@@ -471,6 +485,16 @@ async def lockmap(ctx):
 
         print(rankedVotes)
 
+        if len(rankedVotes) == 0:
+            await ctx.send("Failed to determine votes correctly, resetting...")
+
+            resetMaps()
+            PickMaps(True)
+            mapChoices.append(MapChoice("New Maps"))
+
+            await sendMapEmbed(ctx)
+            return
+
         highestVote = rankedVotes[0][1]
 
         # don't allow lockmap if no votes were cast
@@ -496,10 +520,7 @@ async def lockmap(ctx):
             mapChoices.append(MapChoice(carryOverMap, "🔁"))
 
             recentlyPlayedMapsMsg = None
-            embed = GenerateMapVoteEmbed()
-            mapVoteMessageView = MapChoiceView(mapChoices)
-
-            mapVoteMessage = await ctx.send(embed=embed, view=mapVoteMessageView)
+            await sendMapEmbed(ctx)
         else:
             mapVoteMessage = None
             mapVoteMessageView = None
@@ -584,7 +605,7 @@ async def forcestats(ctx):
         await ctx.send("force-parsing stats; wait 5 sec...")
 
         with open('prevlog.json', 'w') as f:
-            f.write("[]")
+            f.write(r"{}")
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.sendto("BOT_MSG@END".encode(), ('0.0.0.0', int(CLIENT_PORT)))
@@ -594,6 +615,41 @@ async def forcestats(ctx):
         with open('prevlog.json', 'r') as f:
             prevlog = json.load(f)
             await ctx.send('Stats: %s' % prevlog['site'])
+
+@client.command(pass_context=True)
+@commands.has_role('admin')
+async def forceFill(ctx):    
+    global pickupStarted
+    global pickupActive
+
+    global playerList
+    global playerNumber
+
+    global nextCancelConfirms
+    global recentlyPlayedMapsMsg
+
+    print('force-starting pickup')
+    if ctx.channel.name != CHANNEL_NAME:
+        return
+    
+    if len(playerList) != 0:
+        await ctx.send("Can't test filling pickup with players added.")
+        return
+    
+    resetMaps()
+    await DePopulatePickup(ctx)
+
+    pickupStarted = True
+    pickupActive = True    
+    playerList = {}
+    playerNumber = 2
+    
+    pickupStarted = True
+    nextCancelConfirms = False
+    recentlyPlayedMapsMsg = "Maps %s were recently played and are removed from voting." % ", ".join(previousMaps)
+
+    playerList['144036876842434561'] = "azooo"
+    await add(ctx)
 
 @client.command(pass_context=True)
 async def hltv(ctx):
@@ -691,9 +747,9 @@ async def kix(ctx):
 
 @client.command(pass_context=True)
 async def help(ctx):
-    await ctx.send("pickup: !pickup !add !remove !teams !lockmap !cancel")
+    await ctx.send("pickup: !pickup !add !remove !teams !lockmap !cancel !playernumber")
     await ctx.send("info: !stats !timeleft !hltv !logs !tfcmap !server")
-    await ctx.send("admin: !playernumber !kick !lockset !forcestats !vote")
+    await ctx.send("admin: !kick !lockset !forcestats !vote !forcefill")
     await ctx.send("fun: !hamp !teamz !packup !doug !akw !nuki !neon !swk !ja")
     await ctx.send("fun: !repair !country !proonz !angel !masz !seagals (1/4) !kix")
 
