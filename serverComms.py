@@ -29,11 +29,18 @@ def main():
     global FTP_USER
     global FTP_PASSWD
     global FTP_SERVER
+    global NEW_FTP_USER
+    global NEW_FTP_PASSWD
+    global NEW_FTP_SERVER
 
     load_dotenv()
     FTP_USER = os.getenv('FTP_USER')
     FTP_PASSWD = os.getenv('FTP_PASSWD')
     FTP_SERVER = os.getenv('FTP_SERVER')
+
+    NEW_FTP_USER = os.getenv('NEW_FTP_USER')
+    NEW_FTP_PASSWD = os.getenv('NEW_FTP_PASSWD')
+    NEW_FTP_SERVER = os.getenv('NEW_FTP_SERVER')
 
     main_watcher()
 
@@ -41,6 +48,9 @@ def getLastGameLogs():
     global FTP_USER
     global FTP_PASSWD
     global FTP_SERVER
+    global NEW_FTP_USER
+    global NEW_FTP_PASSWD
+    global NEW_FTP_SERVER
 
     if os.path.exists('prevlog.json'):
         with open('prevlog.json', 'r') as f:
@@ -48,7 +58,17 @@ def getLastGameLogs():
     else:
         prevlog = []
 
-    ftp = FTP(FTP_SERVER, user=FTP_USER, passwd=FTP_PASSWD)
+    if os.path.exists('activeServer.json'):
+        with open('activeServer.json', 'r') as f:
+            activeServer = json.load(f)
+    else:
+        activeServer = { 'useNewServer': False }
+
+    if (activeServer['useNewServer']):
+        ftp = FTP(NEW_FTP_SERVER, user=NEW_FTP_USER, passwd=NEW_FTP_PASSWD)
+    else:   
+        ftp = FTP(FTP_SERVER, user=FTP_USER, passwd=FTP_PASSWD)
+                
     ftp.cwd('/tfc/logs')
     logFiles = ftp.nlst('-t') # get list of logs by time
     logFiles.reverse() # sort descending

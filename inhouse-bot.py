@@ -23,9 +23,15 @@ client = commands.Bot(command_prefix = ["!", "+", "-", "nice "], help_command=No
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 CHANNEL_NAME = os.getenv('DISCORD_CHANNEL')
+
 SERVER_IP = os.getenv('SERVER_IP')
 SERVER_PORT = os.getenv('SERVER_PORT') # port to communicate with server plugin
 SERVER_PASSWORD = os.getenv('SERVER_PASSWORD')
+
+NEW_SERVER_IP = os.getenv('NEW_SERVER_IP')
+NEW_SERVER_PORT = os.getenv('NEW_SERVER_PORT') # port to communicate with server plugin
+NEW_SERVER_PASSWORD = os.getenv('NEW_SERVER_PASSWORD')
+
 CLIENT_PORT = os.getenv('CLIENT_PORT') # port to communicate with client plugin listener (serverComms.py)
 
 # on load, load previous teams + map from the prev* files
@@ -58,6 +64,8 @@ mapVote = False
 mapVoteMessage = None
 mapVoteMessageView = None
 nextCancelConfirms = False
+
+useNewServer = False
 
 class MapChoice:
     def __init__(self, mapName, decoration=None):
@@ -217,6 +225,42 @@ async def sendMapEmbed(ctx):
 
     return mapVoteMessageView
 
+async def setActiveServer(ctx, isNew=False):
+    global useNewServer
+
+    useNewServer = isNew
+
+    with open('activeServer.json', 'w') as f:
+        activeServer = { 'useNewServer': useNewServer }
+        json.dump(activeServer, f)
+
+    if isNew:
+        await ctx.send('Using new server!')
+    else:
+        await ctx.send('Using old server.')
+
+def getActiveServer():
+    global useNewServer
+    return NEW_SERVER_IP if useNewServer else SERVER_IP
+
+def getActiveServerPort():
+    global useNewServer
+    return NEW_SERVER_PORT if useNewServer else SERVER_PORT
+
+def getActiveServerPassword():
+    global useNewServer
+    return NEW_SERVER_PASSWORD if useNewServer else SERVER_PASSWORD
+
+@client.command(pass_context=True)
+@commands.has_role('admin')
+async def useNew(ctx):
+    await setActiveServer(ctx, True)
+
+@client.command(pass_context=True)
+@commands.has_role('admin')
+async def useOld(ctx):
+    await setActiveServer(ctx, False)
+
 @client.command(pass_context=True)
 async def pickup(ctx):
     global pickupStarted
@@ -227,6 +271,7 @@ async def pickup(ctx):
     global previousMaps
     global recentlyPlayedMapsMsg
     global nextCancelConfirms
+    global useNewServer
 
     if ctx.prefix == "nice ":
         await add(ctx)
@@ -240,7 +285,7 @@ async def pickup(ctx):
         nextCancelConfirms = False
         recentlyPlayedMapsMsg = "Maps %s were recently played and are removed from voting." % ", ".join(previousMaps)
 
-        await ctx.send("Pickup started. !add in 10 seconds")
+        await ctx.send("Pickup started on %s server. !add in 10 seconds" % ("new Vultur" if useNewServer else "old NFO"))
         await updateNick(ctx, "starting...")
         await asyncio.sleep(5)
         await ctx.send("!add in 5 seconds")
@@ -530,7 +575,7 @@ async def lockmap(ctx):
 
             await ctx.send("The winning map is: " + winningMap)
             await ctx.send("🎉🎉 JOIN INHOUSE YA HOSERS 🎉🎉")
-            await ctx.send("steam://connect/" + SERVER_IP + ":27015/" + SERVER_PASSWORD)
+            await ctx.send("steam://connect/%s:27015/%s" % (getActiveServer(), getActiveServerPassword()))
             await DePopulatePickup(ctx)
 
 @client.command(pass_context=True)
@@ -571,12 +616,14 @@ async def lockset(ctx, mapToLockset):
 
 @client.command(pass_context=True)
 async def timeleft(ctx):
+    global useNewServer
+
     if ctx.channel.name != CHANNEL_NAME:
         return
 
     # construct a UDP packet and send it to the server
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.sendto("BOT_MSG@TIMELEFT@".encode(), (SERVER_IP, int(SERVER_PORT)))
+    sock.sendto("BOT_MSG@TIMELEFT@".encode(), (getActiveServer(), int(getActiveServerPort())))
 
     await asyncio.sleep(3)
     if os.path.exists('timeleft.json'):
@@ -584,7 +631,7 @@ async def timeleft(ctx):
             try:
                 timeleft = json.load(f)
                 if timeleft is not None and timeleft['timeleft']:
-                    await ctx.send("Timeleft: %s" % timeleft['timeleft'])
+                    await ctx.send("Timeleft (%s server): %s" % ("new" if useNewServer else "old", timeleft['timeleft']))
                     return
             except:
                 await ctx.send("Server did not respond.")
@@ -672,7 +719,7 @@ async def tfcmap(ctx, map):
 
 @client.command(pass_context=True)
 async def server(ctx):
-    await ctx.send("steam://connect/104.153.105.235:27015/%s" % SERVER_PASSWORD)
+    await ctx.send("steam://connect/%s:27015/%s" % (getActiveServer(), getActiveServerPassword()))
 
 @client.command(pass_context=True)
 async def teamz(ctx):
@@ -749,7 +796,7 @@ async def kix(ctx):
 async def help(ctx):
     await ctx.send("pickup: !pickup !add !remove !teams !lockmap !cancel !playernumber")
     await ctx.send("info: !stats !timeleft !hltv !logs !tfcmap !server")
-    await ctx.send("admin: !kick !lockset !forcestats !vote !forcefill")
+    await ctx.send("admin: !kick !lockset !forcestats !vote !forcefill !useNew !useOld")
     await ctx.send("fun: !hamp !teamz !packup !doug !akw !nuki !neon !swk !ja")
     await ctx.send("fun: !repair !country !proonz !angel !masz !seagals (1/4) !kix")
 
