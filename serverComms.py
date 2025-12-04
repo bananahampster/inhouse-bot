@@ -157,7 +157,14 @@ class InhouseServerProtocol:
                 self.send_message("TEAMS", ', '.join(prevteams[4:]), addr)
 
         if message_parts[1] == "END":
-            getLastGameLogs()
+            if os.path.exists('activeServer.json'):
+                with open('activeServer.json', 'r') as f:
+                    activeServer = json.load(f)
+            else:
+                activeServer = { 'useNewServer': False }
+
+            if (activeServer['useNewServer'] and addr[0] == NEW_FTP_SERVER) or (not activeServer['useNewServer'] and addr[0] != NEW_FTP_SERVER):
+                getLastGameLogs()
 
         if message_parts[1] == "TIMELEFT":
             with open('timeleft.json', 'w') as f:
