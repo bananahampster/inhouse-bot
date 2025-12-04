@@ -66,10 +66,10 @@ def getLastGameLogs():
 
     if activeServer['useNewServer']:
         ftp = FTP(NEW_FTP_SERVER, user=NEW_FTP_USER, passwd=NEW_FTP_PASSWD)
-        ftp.cwd('/tfc/logs')
+        ftp.cwd('/opt/hlds/tfc/logs')
     else:   
         ftp = FTP(FTP_SERVER, user=FTP_USER, passwd=FTP_PASSWD)
-        ftp.cwd('/opt/hlds/tfc/logs')
+        ftp.cwd('/tfc/logs')
                 
     logFiles = ftp.nlst('-t') # get list of logs by time
     logFiles.reverse() # sort descending
