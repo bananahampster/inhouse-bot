@@ -72,7 +72,10 @@ def getLastGameLogs():
         ftp.cwd('/tfc/logs')
                 
     logFiles = ftp.nlst('-t') # get list of logs by time
-    logFiles.reverse() # sort descending
+
+    # only old server needs this
+    if not activeServer['useNewServer']:
+        logFiles.reverse() # sort descending
 
     firstLog = None
     secondLog = None
@@ -164,6 +167,8 @@ class InhouseServerProtocol:
                 activeServer = { 'useNewServer': False }
 
             if (activeServer['useNewServer'] and addr[0] == NEW_FTP_SERVER) or (not activeServer['useNewServer'] and addr[0] != NEW_FTP_SERVER):
+                getLastGameLogs()
+            elif addr[0] == '127.0.0.1':
                 getLastGameLogs()
 
         if message_parts[1] == "TIMELEFT":
