@@ -657,11 +657,20 @@ async def forcestats(ctx):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.sendto("BOT_MSG@END".encode(), ('0.0.0.0', int(CLIENT_PORT)))
 
-        await asyncio.sleep(5)
+        # try at least 5 times before aborting
+        for i in range(5):
+            await asyncio.sleep(7)
 
-        with open('prevlog.json', 'r') as f:
-            prevlog = json.load(f)
-            await ctx.send('Stats: %s' % prevlog['site'])
+            with open('prevlog.json', 'r') as f:
+                prevlog = json.load(f)
+
+                if 'site' in prevlog:
+                    await ctx.send('Stats: %s' % prevlog['site'])
+                    return
+                
+                await ctx.send('...still parsing')
+
+        await ctx.send('Failed to parse latest log.  Check inhouse-comms logs')
 
 @client.command(pass_context=True)
 @commands.has_role('admin')
