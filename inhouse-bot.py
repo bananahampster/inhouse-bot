@@ -649,7 +649,7 @@ async def stats(ctx):
 async def forcestats(ctx):
     print("forcestats -- channel name" + ctx.channel.name)
     if ctx.channel.name == 'moderator-only':
-        await ctx.send("force-parsing stats; wait 5 sec...")
+        await ctx.send("force-parsing stats; wait 7 sec...")
 
         with open('prevlog.json', 'w') as f:
             f.write(r"{}")

@@ -175,6 +175,19 @@ class InhouseServerProtocol:
             with open('timeleft.json', 'w') as f:
                 json.dump({ 'timeleft': message_parts[-1] }, f)
 
+        if message_parts[1] == 'STATS':
+            if os.path.exists('prevlog.json'):
+                with open('prevlog.json', 'r') as f:
+                    prevlog = json.load(f)
+                    statLink = "(not found)"
+                    
+                    if 'site' in prevlog:
+                        statLink = prevlog['site']
+
+                    self.send_message("STATS", statLink, addr)
+
+            self.send_message("STATS", "(no prevlog found)", addr)
+
 
     def send_message(self, msg_type, message, addr):
         data = ("BOT_MSG@%s@%s" % (msg_type, message)).encode()
