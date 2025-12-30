@@ -132,61 +132,60 @@ class InhouseServerProtocol:
         print('received %r from %s' % (message, addr))
 
         message_parts = message.split("@")
-        if message_parts[0] != "BOT_MSG" or message_parts[0] != "TWITCH_REQ":
-            return
+        if message_parts[0] == "BOT_MSG" or message_parts[0] == "TWITCH_REQ":
 
-        if message_parts[1] == "IRC":
-            print("message inhouse! {}" % message)
+            if message_parts[1] == "IRC":
+                print("message inhouse! {}" % message)
 
-        if message_parts[1] == "MAP":
-            with open('prevmaps.json', 'r') as f:
-                prevmaps = json.load(f)
-                curmap = prevmaps[-1]
+            if message_parts[1] == "MAP":
+                with open('prevmaps.json', 'r') as f:
+                    prevmaps = json.load(f)
+                    curmap = prevmaps[-1]
 
-                self.send_message("MAP", curmap, addr)
+                    self.send_message("MAP", curmap, addr)
 
-        if message_parts[1] == "RS":
-            with open('prevmaps.json', 'r') as f:
-                prevmaps = json.load(f)
-                curmap = prevmaps[-1]
+            if message_parts[1] == "RS":
+                with open('prevmaps.json', 'r') as f:
+                    prevmaps = json.load(f)
+                    curmap = prevmaps[-1]
 
-                self.send_message("RS", curmap, addr)
+                    self.send_message("RS", curmap, addr)
 
-        if message_parts[1] == "TEAMS":
-            with open('prevteams.json', 'r') as f:
-                prevteams = json.load(f)
+            if message_parts[1] == "TEAMS":
+                with open('prevteams.json', 'r') as f:
+                    prevteams = json.load(f)
 
-                self.send_message("TEAMS", ', '.join(prevteams[:4]), addr)
-                self.send_message("TEAMS", ', '.join(prevteams[4:]), addr)
+                    self.send_message("TEAMS", ', '.join(prevteams[:4]), addr)
+                    self.send_message("TEAMS", ', '.join(prevteams[4:]), addr)
 
-        if message_parts[1] == "END":
-            if os.path.exists('activeServer.json'):
-                with open('activeServer.json', 'r') as f:
-                    activeServer = json.load(f)
-            else:
-                activeServer = { 'useNewServer': False }
+            if message_parts[1] == "END":
+                if os.path.exists('activeServer.json'):
+                    with open('activeServer.json', 'r') as f:
+                        activeServer = json.load(f)
+                else:
+                    activeServer = { 'useNewServer': False }
 
-            if (activeServer['useNewServer'] and addr[0] == NEW_FTP_SERVER) or (not activeServer['useNewServer'] and addr[0] != NEW_FTP_SERVER):
-                getLastGameLogs()
-            elif addr[0] == '127.0.0.1':
-                getLastGameLogs()
+                if (activeServer['useNewServer'] and addr[0] == NEW_FTP_SERVER) or (not activeServer['useNewServer'] and addr[0] != NEW_FTP_SERVER):
+                    getLastGameLogs()
+                elif addr[0] == '127.0.0.1':
+                    getLastGameLogs()
 
-        if message_parts[1] == "TIMELEFT":
-            with open('timeleft.json', 'w') as f:
-                json.dump({ 'timeleft': message_parts[-1] }, f)
+            if message_parts[1] == "TIMELEFT":
+                with open('timeleft.json', 'w') as f:
+                    json.dump({ 'timeleft': message_parts[-1] }, f)
 
-        if message_parts[1] == 'STATS':
-            if os.path.exists('prevlog.json'):
-                with open('prevlog.json', 'r') as f:
-                    prevlog = json.load(f)
-                    statLink = "(not found)"
+            if message_parts[1] == 'STATS':
+                if os.path.exists('prevlog.json'):
+                    with open('prevlog.json', 'r') as f:
+                        prevlog = json.load(f)
+                        statLink = "(not found)"
 
-                    if 'site' in prevlog:
-                        statLink = prevlog['site']
+                        if 'site' in prevlog:
+                            statLink = prevlog['site']
 
-                    self.send_twitch_message("STATS", statLink, addr)
+                        self.send_twitch_message("STATS", statLink, addr)
 
-            self.send_twitch_message("STATS", "(no prevlog found)", addr)
+                self.send_twitch_message("STATS", "(no prevlog found)", addr)
 
 
     def send_message(self, msg_type, message, addr):
