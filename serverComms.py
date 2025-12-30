@@ -132,7 +132,7 @@ class InhouseServerProtocol:
         print('received %r from %s' % (message, addr))
 
         message_parts = message.split("@")
-        if message_parts[0] != "BOT_MSG":
+        if message_parts[0] != "BOT_MSG" or message_parts[0] != "TWITCH_REQ":
             return
 
         if message_parts[1] == "IRC":
@@ -180,18 +180,23 @@ class InhouseServerProtocol:
                 with open('prevlog.json', 'r') as f:
                     prevlog = json.load(f)
                     statLink = "(not found)"
-                    
+
                     if 'site' in prevlog:
                         statLink = prevlog['site']
 
-                    self.send_message("STATS", statLink, addr)
+                    self.send_twitch_message("STATS", statLink, addr)
 
-            self.send_message("STATS", "(no prevlog found)", addr)
+            self.send_twitch_message("STATS", "(no prevlog found)", addr)
 
 
     def send_message(self, msg_type, message, addr):
         data = ("BOT_MSG@%s@%s" % (msg_type, message)).encode()
         self.transport.sendto(data, (addr[0], 16354))  # bot only listens on this port
+
+    def send_twitch_message(self, msg_type, message, addr):
+        data = ("TWITCH_REQ@%s@%s" % (msg_type, message)).encode()
+        self.transport.sendto(data, (addr[0], 16354))  # bot only listens on this port
+
 
 if __name__ == "__main__":
     main()
