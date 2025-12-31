@@ -175,6 +175,10 @@ class InhouseServerProtocol:
                     json.dump({ 'timeleft': message_parts[-1] }, f)
 
             if message_parts[1] == 'STATS':
+                channel = None
+                if len(message_parts) >= 4:
+                    channel = message_parts[3]
+
                 if os.path.exists('prevlog.json'):
                     with open('prevlog.json', 'r') as f:
                         prevlog = json.load(f)
@@ -183,17 +187,20 @@ class InhouseServerProtocol:
                         if 'site' in prevlog:
                             statLink = prevlog['site']
 
-                        self.send_twitch_message("STATS", statLink, addr)
-
-                self.send_twitch_message("STATS", "(no prevlog found)", addr)
+                        self.send_twitch_message("STATS", statLink, addr, channel)
+                else:
+                    self.send_twitch_message("STATS", "(no prevlog found)", addr, channel)
 
 
     def send_message(self, msg_type, message, addr):
         data = ("BOT_MSG@%s@%s" % (msg_type, message)).encode()
         self.transport.sendto(data, (addr[0], 16354))  # bot only listens on this port
 
-    def send_twitch_message(self, msg_type, message, addr):
-        data = ("TWITCH_REQ@%s@%s" % (msg_type, message)).encode()
+    def send_twitch_message(self, msg_type, message, addr, channel=None):
+        if channel is None:
+            data = ("TWITCH_RET@%s@%s" % (msg_type, message)).encode()
+        else:
+            data = ("TWITCH_RET@%s@%s" % (channel, message)).encode()
         self.transport.sendto(data, (addr[0], 16354))  # bot only listens on this port
 
 
