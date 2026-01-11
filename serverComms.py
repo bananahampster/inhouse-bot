@@ -108,7 +108,8 @@ def getLastGameLogs():
     ftp.retrbinary("RETR %s" % firstLog[0], open('logs/%s' % firstLog[0], 'wb').write)
     ftp.retrbinary("RETR %s" % secondLog[0], open('logs/%s' % secondLog[0], 'wb').write)
 
-    hampalyze = 'curl -X POST -F logs[]=@%s -F logs[]=@%s http://app.hampalyzer.com/api/parseGame' % ('logs/'+secondLog[0], 'logs/'+firstLog[0])
+    hampalyze = 'curl -L -X POST -F logs[]=@%s -F logs[]=@%s http://app.hampalyzer.com/api/parseGame' % ('logs/'+secondLog[0], 'logs/'+firstLog[0])
+    print("sending command: %s" % hampalyze)
     output = os.popen(hampalyze).read()
     print(output)
 
