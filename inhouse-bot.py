@@ -811,7 +811,15 @@ async def help(ctx):
 
 @client.event
 async def on_ready():
+    global useNewServer
+
     print(f'{client.user} is aliiiiiive!')
 
+    # figure out if we should be using new server
+    if os.path.exists('activeServer.json'):
+        with open('activeServer.json', 'r') as f:
+            activeServer = json.load(f)
+            if activeServer['useNewServer']:
+                useNewServer = True
 
 client.run(TOKEN)

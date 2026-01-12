@@ -115,7 +115,7 @@ def getLastGameLogs():
 
     status = json.loads(output)
     if 'success' in status:
-        site = "http://app.hampalyzer.com" + status['success']['path']
+        site = "https://app.hampalyzer.com" + status['success']['path']
         print("Parsed logs available: %s" % site)
 
         with open('prevlog.json', 'w') as f:
