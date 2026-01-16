@@ -709,7 +709,7 @@ async def forceFill(ctx):
 
 @client.command(pass_context=True)
 async def hltv(ctx):
-    await ctx.send("HLTV: http://inhouse.site.nfoservers.com/HLTV/akw/")
+    await ctx.send("HLTV: http://inhouse.hampalyzer.com/hltv/")
 
 @client.command(pass_context=True)
 async def logs(ctx):
