@@ -66,6 +66,11 @@ mapVoteMessageView = None
 nextCancelConfirms = False
 
 useNewServer = False
+# Global command lock.
+#
+# Every function decorated with @client.command must explicitly acquire this lock
+# using `async with commandExecutionLock:` so user commands execute serially.
+commandExecutionLock = asyncio.Lock()
 
 class MapChoice:
     def __init__(self, mapName, decoration=None):
@@ -254,12 +259,14 @@ def getActiveServerPassword():
 @client.command(pass_context=True)
 @commands.has_role('admin')
 async def useNew(ctx):
-    await setActiveServer(ctx, True)
+    async with commandExecutionLock:
+        await setActiveServer(ctx, True)
 
 @client.command(pass_context=True)
 @commands.has_role('admin')
 async def useOld(ctx):
-    await setActiveServer(ctx, False)
+    async with commandExecutionLock:
+        await setActiveServer(ctx, False)
 
 @client.command(pass_context=True)
 async def pickup(ctx):
@@ -273,30 +280,31 @@ async def pickup(ctx):
     global nextCancelConfirms
     global useNewServer
 
-    if ctx.prefix == "nice ":
-        await add(ctx)
-        return
+    async with commandExecutionLock:
+        if ctx.prefix == "nice ":
+            await addInternal(ctx)
+            return
 
-    if pickupStarted == False and pickupActive == False and mapVote == False and ctx.channel.name == CHANNEL_NAME:
-        resetMaps()
-        await DePopulatePickup(ctx)
+        if pickupStarted == False and pickupActive == False and mapVote == False and ctx.channel.name == CHANNEL_NAME:
+            resetMaps()
+            await DePopulatePickup(ctx)
 
-        pickupStarted = True
-        nextCancelConfirms = False
-        recentlyPlayedMapsMsg = "Maps %s were recently played and are removed from voting." % ", ".join(previousMaps)
+            pickupStarted = True
+            nextCancelConfirms = False
+            recentlyPlayedMapsMsg = "Maps %s were recently played and are removed from voting." % ", ".join(previousMaps)
 
-        await ctx.send("Pickup started on %s server. !add in 10 seconds" % ("new Vultur" if useNewServer else "old NFO"))
-        await updateNick(ctx, "starting...")
-        await asyncio.sleep(5)
-        await ctx.send("!add in 5 seconds")
-        await asyncio.sleep(5)
+            await ctx.send("Pickup started on %s server. !add in 10 seconds" % ("new Vultur" if useNewServer else "old NFO"))
+            await updateNick(ctx, "starting...")
+            await asyncio.sleep(5)
+            await ctx.send("!add in 5 seconds")
+            await asyncio.sleep(5)
 
-        if pickupStarted == True:
-            pickupActive = True
-            await ctx.send("!add enabled")
-            await printPlayerList(ctx)
-        else:
-            await ctx.send("Pickup was canceled before countdown finished 🤨")
+            if pickupStarted == True:
+                pickupActive = True
+                await ctx.send("!add enabled")
+                await printPlayerList(ctx)
+            else:
+                await ctx.send("Pickup was canceled before countdown finished 🤨")
 
 @client.command(pass_context=True)
 async def cancel(ctx):
@@ -306,40 +314,42 @@ async def cancel(ctx):
     global mapVoteMessage
     global nextCancelConfirms
 
-    if mapVote != False and not nextCancelConfirms:
-        await ctx.send("You're still picking maps, still wanna cancel?")
-        nextCancelConfirms = True
-        return
-    if pickupStarted == True or pickupActive == True:
-        pickupStarted = False
-        pickupActive = False
-        if mapVoteMessage is not None:
-            await mapVoteMessage.edit(view=None)
-            mapVoteMessage = None
-        await ctx.send("Pickup canceled.")
-        await DePopulatePickup(ctx)
-    else:
-        await ctx.send("No pickup active.")
+    async with commandExecutionLock:
+        if mapVote != False and not nextCancelConfirms:
+            await ctx.send("You're still picking maps, still wanna cancel?")
+            nextCancelConfirms = True
+            return
+        if pickupStarted == True or pickupActive == True:
+            pickupStarted = False
+            pickupActive = False
+            if mapVoteMessage is not None:
+                await mapVoteMessage.edit(view=None)
+                mapVoteMessage = None
+            await ctx.send("Pickup canceled.")
+            await DePopulatePickup(ctx)
+        else:
+            await ctx.send("No pickup active.")
 
 @client.command(pass_context=True)
 async def playernumber(ctx, numPlayers: int):
     global playerNumber
 
-    if ctx.channel.name != CHANNEL_NAME:
-        return
+    async with commandExecutionLock:
+        if ctx.channel.name != CHANNEL_NAME:
+            return
 
-    try:
-        players = int(numPlayers)
-    except:
-        await ctx.send("Given value isn't a number you doofus.")
-        return
+        try:
+            players = int(numPlayers)
+        except:
+            await ctx.send("Given value isn't a number you doofus.")
+            return
 
-    if players % 2 == 0 and players <= 20 and players >= 2:
-        playerNumber = players
-        await ctx.send("Set pickup to fill at %d players" % playerNumber)
-        await updateNick(ctx, str(len(playerList)) + "/" + str(playerNumber))
-    else:
-        await ctx.send("Can't set pickup to an odd number, too few, or too many players")
+        if players % 2 == 0 and players <= 20 and players >= 2:
+            playerNumber = players
+            await ctx.send("Set pickup to fill at %d players" % playerNumber)
+            await updateNick(ctx, str(len(playerList)) + "/" + str(playerNumber))
+        else:
+            await ctx.send("Can't set pickup to an odd number, too few, or too many players")
 
 def GenerateMapVoteEmbed():
     global emoji
@@ -383,16 +393,17 @@ def GenerateMapVoteEmbed():
 
 @client.command(pass_context=True, name="+")
 async def plusPlus(ctx):
-    if ctx.prefix == "+":
-        await add(ctx)
+    async with commandExecutionLock:
+        if ctx.prefix == "+":
+            await addInternal(ctx)
 
 @client.command(pass_context=True, name="-")
 async def minusMinus(ctx):
-    if ctx.prefix == "-":
-        await remove(ctx)
+    async with commandExecutionLock:
+        if ctx.prefix == "-":
+            await removeInternal(ctx)
 
-@client.command(pass_context=True)
-async def add(ctx):
+async def addInternal(ctx):
     global playerNumber
     global playerList
     global pickupActive
@@ -438,6 +449,11 @@ async def add(ctx):
                     mentionString = mentionString + ("<@%s> " % playerId)
                 await ctx.send(mentionString)
 
+@client.command(pass_context=True)
+async def add(ctx):
+    async with commandExecutionLock:
+        await addInternal(ctx)
+
 @tasks.loop(minutes=30)
 async def idlecancel():
     global lastAdd
@@ -445,19 +461,19 @@ async def idlecancel():
     global pickupActive
     global mapVote
 
-    if pickupActive == True and pickupStarted == True and mapVote == False:
-        # check if 3 hours since last add
-        lastAddDiff = (datetime.datetime.utcnow() - lastAdd).total_seconds()
-        print("last add was %d minutes ago" % (lastAddDiff / 60))
+    async with commandExecutionLock:
+        if pickupActive == True and pickupStarted == True and mapVote == False:
+            # check if 3 hours since last add
+            lastAddDiff = (datetime.datetime.utcnow() - lastAdd).total_seconds()
+            print("last add was %d minutes ago" % (lastAddDiff / 60))
 
-        if lastAddDiff > (3 * 60 * 60):
-            print("stopping pickup")
+            if lastAddDiff > (3 * 60 * 60):
+                print("stopping pickup")
 
-            await lastAddCtx.send("Pickup idle for more than three hours, canceling.")
-            await DePopulatePickup(lastAddCtx)
+                await lastAddCtx.send("Pickup idle for more than three hours, canceling.")
+                await DePopulatePickup(lastAddCtx)
 
-@client.command(pass_context=True)
-async def remove(ctx):
+async def removeInternal(ctx):
     global playerList
     global pickupActive
 
@@ -467,24 +483,31 @@ async def remove(ctx):
             await printPlayerList(ctx)
 
 @client.command(pass_context=True)
+async def remove(ctx):
+    async with commandExecutionLock:
+        await removeInternal(ctx)
+
+@client.command(pass_context=True)
 @commands.has_role('admin')
 async def kick(ctx, player: discord.User):
     global playerList
 
-    if player is not None and player.id in playerList:
-        del playerList[player.id]
-        await ctx.send("Kicked %s from the pickup." % player.mention)
-        await printPlayerList(ctx)
+    async with commandExecutionLock:
+        if player is not None and player.id in playerList:
+            del playerList[player.id]
+            await ctx.send("Kicked %s from the pickup." % player.mention)
+            await printPlayerList(ctx)
 
 @client.command(pass_context=True)
 async def teams(ctx):
-    if ctx.channel.name != CHANNEL_NAME:
-        return
+    async with commandExecutionLock:
+        if ctx.channel.name != CHANNEL_NAME:
+            return
 
-    if pickupStarted == False:
-        await ctx.send("No pickup active.")
-    else:
-        await printPlayerList(ctx)
+        if pickupStarted == False:
+            await ctx.send("No pickup active.")
+        else:
+            await printPlayerList(ctx)
 
 
 def processVote(player: discord.Member=None, vote=None):
@@ -514,69 +537,70 @@ async def lockmap(ctx):
     global recentlyPlayedMapsMsg
     global nextCancelConfirms
 
-    if ctx.channel.name != CHANNEL_NAME:
-        return
-
-    rankedVotes = []
-    highestVote = 0
-    winningMap = " "
-
-    if(mapVote == True):
-        nextCancelConfirms = False
-
-        # get top maps
-        mapTally = [(mapChoice.mapName, len(mapChoice.votes)) for mapChoice in mapChoices]
-        rankedVotes = sorted(mapTally, key=lambda e: e[1], reverse=True)
-
-        print(rankedVotes)
-
-        if len(rankedVotes) == 0:
-            await ctx.send("Failed to determine votes correctly, resetting...")
-
-            resetMaps()
-            PickMaps(True)
-            mapChoices.append(MapChoice("New Maps"))
-
-            await sendMapEmbed(ctx)
+    async with commandExecutionLock:
+        if ctx.channel.name != CHANNEL_NAME:
             return
 
-        highestVote = rankedVotes[0][1]
+        rankedVotes = []
+        highestVote = 0
+        winningMap = " "
 
-        # don't allow lockmap if no votes were cast
-        if highestVote == 0:
-            await ctx.send("!lockmap denied; no votes were cast.")
-            return
+        if(mapVote == True):
+            nextCancelConfirms = False
 
-        # Hide voting buttons now that the vote is complete.
-        mapVoteMessageView = None
-        await mapVoteMessage.edit(view=None)
+            # get top maps
+            mapTally = [(mapChoice.mapName, len(mapChoice.votes)) for mapChoice in mapChoices]
+            rankedVotes = sorted(mapTally, key=lambda e: e[1], reverse=True)
 
-        winningMaps = [pickedMap for (pickedMap, votes) in rankedVotes if votes == highestVote]
+            print(rankedVotes)
 
-        # don't allow "New Maps" to win
-        if len(winningMaps) > 1 and "New Maps" in winningMaps:
-            winningMap = "New Maps"
-        else:
-            winningMap = random.choice(winningMaps)
+            if len(rankedVotes) == 0:
+                await ctx.send("Failed to determine votes correctly, resetting...")
 
-        if(winningMap == "New Maps"):
-            PickMaps()
-            carryOverMap = random.choice([pickedMap for (pickedMap, votes) in rankedVotes if votes == rankedVotes[1][1] and pickedMap != "New Maps"])
-            mapChoices.append(MapChoice(carryOverMap, "🔁"))
+                resetMaps()
+                PickMaps(True)
+                mapChoices.append(MapChoice("New Maps"))
 
-            recentlyPlayedMapsMsg = None
-            await sendMapEmbed(ctx)
-        else:
-            mapVoteMessage = None
+                await sendMapEmbed(ctx)
+                return
+
+            highestVote = rankedVotes[0][1]
+
+            # don't allow lockmap if no votes were cast
+            if highestVote == 0:
+                await ctx.send("!lockmap denied; no votes were cast.")
+                return
+
+            # Hide voting buttons now that the vote is complete.
             mapVoteMessageView = None
+            await mapVoteMessage.edit(view=None)
 
-            mapVote = False
-            RecordMapAndTeams(winningMap)
+            winningMaps = [pickedMap for (pickedMap, votes) in rankedVotes if votes == highestVote]
 
-            await ctx.send("The winning map is: " + winningMap)
-            await ctx.send("🎉🎉 JOIN INHOUSE YA HOSERS 🎉🎉")
-            await ctx.send("steam://connect/%s:27015/%s" % (getActiveServer(), getActiveServerPassword()))
-            await DePopulatePickup(ctx)
+            # don't allow "New Maps" to win
+            if len(winningMaps) > 1 and "New Maps" in winningMaps:
+                winningMap = "New Maps"
+            else:
+                winningMap = random.choice(winningMaps)
+
+            if(winningMap == "New Maps"):
+                PickMaps()
+                carryOverMap = random.choice([pickedMap for (pickedMap, votes) in rankedVotes if votes == rankedVotes[1][1] and pickedMap != "New Maps"])
+                mapChoices.append(MapChoice(carryOverMap, "🔁"))
+
+                recentlyPlayedMapsMsg = None
+                await sendMapEmbed(ctx)
+            else:
+                mapVoteMessage = None
+                mapVoteMessageView = None
+
+                mapVote = False
+                RecordMapAndTeams(winningMap)
+
+                await ctx.send("The winning map is: " + winningMap)
+                await ctx.send("🎉🎉 JOIN INHOUSE YA HOSERS 🎉🎉")
+                await ctx.send("steam://connect/%s:27015/%s" % (getActiveServer(), getActiveServerPassword()))
+                await DePopulatePickup(ctx)
 
 @client.command(pass_context=True)
 async def vote(ctx):
@@ -584,14 +608,15 @@ async def vote(ctx):
     global playerList
     global mapChoices
 
-    if mapVote == True and ctx.channel.name == CHANNEL_NAME:
-        playersVoted = [playerId for mapChoice in mapChoices for playerId in mapChoice.votes]
-        playersAbstained = [playerId for playerId in playerList.keys() if playerId not in playersVoted]
+    async with commandExecutionLock:
+        if mapVote == True and ctx.channel.name == CHANNEL_NAME:
+            playersVoted = [playerId for mapChoice in mapChoices for playerId in mapChoice.votes]
+            playersAbstained = [playerId for playerId in playerList.keys() if playerId not in playersVoted]
 
-        mentionString = "🗳️🗳️ vote maps or kick: "
-        for playerId in playersAbstained:
-            mentionString = mentionString + ("<@%s> " % playerId)
-        await ctx.send(mentionString + " 🗳️🗳️")
+            mentionString = "🗳️🗳️ vote maps or kick: "
+            for playerId in playersAbstained:
+                mentionString = mentionString + ("<@%s> " % playerId)
+            await ctx.send(mentionString + " 🗳️🗳️")
 
 @client.command(pass_context=True)
 async def lockset(ctx, mapToLockset):
@@ -599,78 +624,82 @@ async def lockset(ctx, mapToLockset):
     global pickupActive
     global mapVote
 
-    if ctx.channel.name != CHANNEL_NAME:
-        return
+    async with commandExecutionLock:
+        if ctx.channel.name != CHANNEL_NAME:
+            return
 
-    if pickupActive != False and mapVote != False:
-        await ctx.send("Error: can only !lockset during map voting or if no pickup is active (changes the map for the last pickup)")
-        return
+        if pickupActive != False and mapVote != False:
+            await ctx.send("Error: can only !lockset during map voting or if no pickup is active (changes the map for the last pickup)")
+            return
 
-    previousMaps.pop()
-    previousMaps.append(mapToLockset)
+        previousMaps.pop()
+        previousMaps.append(mapToLockset)
 
-    with open('prevmaps.json', 'w') as f:
-        json.dump(list(previousMaps), f)
+        with open('prevmaps.json', 'w') as f:
+            json.dump(list(previousMaps), f)
 
-    await ctx.send("Set pickup map to %s" % mapToLockset)
+        await ctx.send("Set pickup map to %s" % mapToLockset)
 
 @client.command(pass_context=True)
 async def timeleft(ctx):
     global useNewServer
 
-    if ctx.channel.name != CHANNEL_NAME:
-        return
+    async with commandExecutionLock:
+        if ctx.channel.name != CHANNEL_NAME:
+            return
 
-    # construct a UDP packet and send it to the server
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.sendto("BOT_MSG@TIMELEFT@".encode(), (getActiveServer(), int(getActiveServerPort())))
+        # construct a UDP packet and send it to the server
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.sendto("BOT_MSG@TIMELEFT@".encode(), (getActiveServer(), int(getActiveServerPort())))
 
-    await asyncio.sleep(3)
-    if os.path.exists('timeleft.json'):
-        with open('timeleft.json', 'r') as f:
-            try:
-                timeleft = json.load(f)
-                if timeleft is not None and timeleft['timeleft']:
-                    await ctx.send("Timeleft (%s server): %s" % ("new" if useNewServer else "old", timeleft['timeleft']))
-                    return
-            except:
-                await ctx.send("Server did not respond.")
-    else:
-        await ctx.send("Server did not respond")
+        await asyncio.sleep(3)
+        if os.path.exists('timeleft.json'):
+            with open('timeleft.json', 'r') as f:
+                try:
+                    timeleft = json.load(f)
+                    if timeleft is not None and timeleft['timeleft']:
+                        await ctx.send("Timeleft (%s server): %s" % ("new" if useNewServer else "old", timeleft['timeleft']))
+                        return
+                except:
+                    await ctx.send("Server did not respond.")
+        else:
+            await ctx.send("Server did not respond")
 
 @client.command(pass_context=True)
 async def stats(ctx):
-    with open('prevlog.json', 'r') as f:
-        prevlog = json.load(f)
-        await ctx.send('Stats: %s' % prevlog['site'])
+    async with commandExecutionLock:
+        with open('prevlog.json', 'r') as f:
+            prevlog = json.load(f)
+            await ctx.send('Stats: %s' % prevlog['site'])
 
 @client.command(pass_context=True)
 @commands.has_role('admin')
 async def forcestats(ctx):
-    print("forcestats -- channel name" + ctx.channel.name)
-    if ctx.channel.name == 'moderator-only':
-        await ctx.send("force-parsing stats; wait 7 sec...")
+    async with commandExecutionLock:
+        print("forcestats -- channel name" + ctx.channel.name)
+        if ctx.channel.name == 'moderator-only':
+            await ctx.send("force-parsing stats; wait 7 sec...")
 
-        with open('prevlog.json', 'w') as f:
-            f.write(r"{}")
+            with open('prevlog.json', 'w') as f:
+                f.write(r"{}")
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.sendto("BOT_MSG@END".encode(), ('0.0.0.0', int(CLIENT_PORT)))
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.sendto("BOT_MSG@END".encode(), ('0.0.0.0', int(CLIENT_PORT)))
 
-        # try at least 5 times before aborting
-        for i in range(5):
-            await asyncio.sleep(7)
+            # try at least 5 times before aborting
+            for i in range(5):
+                await asyncio.sleep(7)
 
-            with open('prevlog.json', 'r') as f:
-                prevlog = json.load(f)
+                with open('prevlog.json', 'r') as f:
+                    prevlog = json.load(f)
 
-                if 'site' in prevlog:
-                    await ctx.send('Stats: %s' % prevlog['site'])
-                    return
-                
-                await ctx.send('...still parsing')
+                    if 'site' in prevlog:
+                        await ctx.send('Stats: %s' % prevlog['site'])
+                        return
+                    
+                    await ctx.send('...still parsing')
 
-        await ctx.send('Failed to parse latest log.  Check inhouse-comms logs')
+            await ctx.send('Failed to parse latest log.  Check inhouse-comms logs')
 
 @client.command(pass_context=True)
 @commands.has_role('admin')
@@ -684,130 +713,152 @@ async def forceFill(ctx):
     global nextCancelConfirms
     global recentlyPlayedMapsMsg
 
-    print('force-starting pickup')
-    if ctx.channel.name != CHANNEL_NAME:
-        return
-    
-    if len(playerList) != 0:
-        await ctx.send("Can't test filling pickup with players added.")
-        return
-    
-    resetMaps()
-    await DePopulatePickup(ctx)
+    async with commandExecutionLock:
+        print('force-starting pickup')
+        if ctx.channel.name != CHANNEL_NAME:
+            return
+        
+        if len(playerList) != 0:
+            await ctx.send("Can't test filling pickup with players added.")
+            return
+        
+        resetMaps()
+        await DePopulatePickup(ctx)
 
-    pickupStarted = True
-    pickupActive = True    
-    playerList = {}
-    playerNumber = 2
-    
-    pickupStarted = True
-    nextCancelConfirms = False
-    recentlyPlayedMapsMsg = "Maps %s were recently played and are removed from voting." % ", ".join(previousMaps)
+        pickupStarted = True
+        pickupActive = True    
+        playerList = {}
+        playerNumber = 2
+        
+        pickupStarted = True
+        nextCancelConfirms = False
+        recentlyPlayedMapsMsg = "Maps %s were recently played and are removed from voting." % ", ".join(previousMaps)
 
-    playerList['144036876842434561'] = "azooo"
-    await add(ctx)
+        playerList['144036876842434561'] = "azooo"
+        await addInternal(ctx)
 
 @client.command(pass_context=True)
 async def hltv(ctx):
-    await ctx.send("HLTV: http://inhouse.hampalyzer.com/hltv/")
+    async with commandExecutionLock:
+        await ctx.send("HLTV: http://inhouse.hampalyzer.com/hltv/")
 
 @client.command(pass_context=True)
 async def logs(ctx):
-    await ctx.send("Logs: http://inhouse.site.nfoservers.com/akw/")
+    async with commandExecutionLock:
+        await ctx.send("Logs: http://inhouse.site.nfoservers.com/akw/")
 
 @client.command(pass_context=True)
 async def tfcmap(ctx, map):
-    map = map.lower()
-    with urllib.request.urlopen(r"http://mrclan.com/tfcmaps/") as mapIndex:
-        response = mapIndex.read().decode("utf-8")
-        matches = re.findall('<a href="/tfcmaps/%s.zip' % (map), response, re.I)
-        if len(matches) != 0:
-            await ctx.send("Found map: http://mrclan.com/tfcmaps/%s.zip" % (map))
-        else:
-            await ctx.send("Didn't find specified map. [All known maps are here](http://mrclan.com/tfcmaps/).")
+    async with commandExecutionLock:
+        map = map.lower()
+        with urllib.request.urlopen(r"http://mrclan.com/tfcmaps/") as mapIndex:
+            response = mapIndex.read().decode("utf-8")
+            matches = re.findall('<a href="/tfcmaps/%s.zip' % (map), response, re.I)
+            if len(matches) != 0:
+                await ctx.send("Found map: http://mrclan.com/tfcmaps/%s.zip" % (map))
+            else:
+                await ctx.send("Didn't find specified map. [All known maps are here](http://mrclan.com/tfcmaps/).")
 
 @client.command(pass_context=True)
 async def server(ctx):
-    await ctx.send("steam://connect/%s:27015/%s" % (getActiveServer(), getActiveServerPassword()))
+    async with commandExecutionLock:
+        await ctx.send("steam://connect/%s:27015/%s" % (getActiveServer(), getActiveServerPassword()))
 
 @client.command(pass_context=True)
 async def teamz(ctx):
-    await ctx.send("```\nPlayers (8/8)\nnuki, nuki, nuki, nuki, nuki, nuki, nuki, nuki```")
+    async with commandExecutionLock:
+        await ctx.send("```\nPlayers (8/8)\nnuki, nuki, nuki, nuki, nuki, nuki, nuki, nuki```")
 
 @client.command(pass_context=True)
 async def packup(ctx):
-    await ctx.send("Where's that fucking Hampster?  I swear I'm gonna pack that rodent up... 🐹")
+    async with commandExecutionLock:
+        await ctx.send("Where's that fucking Hampster?  I swear I'm gonna pack that rodent up... 🐹")
 
 @client.command(pass_context=True)
 async def doug(ctx):
-    await ctx.send("Doug was a semi-professional Team Fortress Classic Player between 2000 and 2007 achieving co-leading The Cereal Killers to holding all three major league titles at the same time. Doug left gaming for almost a decade and now he's back, streaming old Team Fortress Classic and Fortnite games.")
+    async with commandExecutionLock:
+        await ctx.send("Doug was a semi-professional Team Fortress Classic Player between 2000 and 2007 achieving co-leading The Cereal Killers to holding all three major league titles at the same time. Doug left gaming for almost a decade and now he's back, streaming old Team Fortress Classic and Fortnite games.")
 
 @client.command(pass_context=True)
 async def akw(ctx):
-    await ctx.send("akw likes butts 🍑")
+    async with commandExecutionLock:
+        await ctx.send("akw likes butts 🍑")
 
 @client.command(pass_context=True)
 async def hamp(ctx):
-    await ctx.send("https://streamable.com/0328u")
+    async with commandExecutionLock:
+        await ctx.send("https://streamable.com/0328u")
 
 @client.command(pass_context=True)
 async def nuki(ctx):
-    await ctx.send("https://clips.twitch.tv/PoorRefinedTurnipFreakinStinkin")
+    async with commandExecutionLock:
+        await ctx.send("https://clips.twitch.tv/PoorRefinedTurnipFreakinStinkin")
 
 @client.command(pass_context=True)
 async def repair(ctx):
-    await ctx.send("https://www.twitch.tv/davjs/clip/ViscousPuzzledKoupreySmoocherZ")
+    async with commandExecutionLock:
+        await ctx.send("https://www.twitch.tv/davjs/clip/ViscousPuzzledKoupreySmoocherZ")
 
 @client.command(pass_context=True)
 async def country(ctx):
-    await ctx.send("http://hampalyzer.com/country-trolls-hump2.mp4")
+    async with commandExecutionLock:
+        await ctx.send("http://hampalyzer.com/country-trolls-hump2.mp4")
 
 @client.command(pass_context=True)
 async def neon(ctx):
-    await ctx.send("https://clips.twitch.tv/VenomousCrepuscularJuicePeanutButterJellyTime")
+    async with commandExecutionLock:
+        await ctx.send("https://clips.twitch.tv/VenomousCrepuscularJuicePeanutButterJellyTime")
 
 @client.command(pass_context=True)
 async def proonz(ctx):
-    await ctx.send("https://streamable.com/xugb7r")
+    async with commandExecutionLock:
+        await ctx.send("https://streamable.com/xugb7r")
 
 @client.command(pass_context=True)
 async def masz(ctx):
-    await ctx.send("https://www.twitch.tv/neonlight_tfc/clip/BoldEnthusiasticFerretKevinTurtle-Wz33i-BA34JDjxVp")
+    async with commandExecutionLock:
+        await ctx.send("https://www.twitch.tv/neonlight_tfc/clip/BoldEnthusiasticFerretKevinTurtle-Wz33i-BA34JDjxVp")
 
 @client.command(pass_context=True)
 async def swk(ctx):
-    await ctx.send("https://streamable.com/ut068u")
+    async with commandExecutionLock:
+        await ctx.send("https://streamable.com/ut068u")
 
 @client.command(pass_context=True)
 async def seagals(ctx):
-    clips = [
-        "https://streamable.com/mt9hjy",
-        "https://streamable.com/7ko1hh",
-        "https://streamable.com/m0cmzf",
-        "https://clips.twitch.tv/VictoriousConsiderateMosquitoHeyGirl-L8XUHMzJWHPWgTnY"
-    ]
+    async with commandExecutionLock:
+        clips = [
+            "https://streamable.com/mt9hjy",
+            "https://streamable.com/7ko1hh",
+            "https://streamable.com/m0cmzf",
+            "https://clips.twitch.tv/VictoriousConsiderateMosquitoHeyGirl-L8XUHMzJWHPWgTnY"
+        ]
 
-    await ctx.send(random.choice(clips))
+        await ctx.send(random.choice(clips))
 
 @client.command(pass_context=True)
 async def angel(ctx):
-    await ctx.send("https://www.twitch.tv/nugki/clip/BlindingPatientPotPeteZaroll")
+    async with commandExecutionLock:
+        await ctx.send("https://www.twitch.tv/nugki/clip/BlindingPatientPotPeteZaroll")
 
 @client.command(pass_context=True)
 async def ja(ctx):
-    await ctx.send("https://www.twitch.tv/bananahampster/clip/DependableSpineyTruffleBIRB")
+    async with commandExecutionLock:
+        await ctx.send("https://www.twitch.tv/bananahampster/clip/DependableSpineyTruffleBIRB")
 
 @client.command(pass_context=True)
 async def kix(ctx):
-    await ctx.send("https://www.twitch.tv/r0flz/clip/UglyGrotesqueCattlePraiseIt")
+    async with commandExecutionLock:
+        await ctx.send("https://www.twitch.tv/r0flz/clip/UglyGrotesqueCattlePraiseIt")
 
 @client.command(pass_context=True)
 async def help(ctx):
-    await ctx.send("pickup: !pickup !add !remove !teams !lockmap !cancel !playernumber")
-    await ctx.send("info: !stats !timeleft !hltv !logs !tfcmap !server")
-    await ctx.send("admin: !kick !lockset !forcestats !vote !forcefill !useNew !useOld")
-    await ctx.send("fun: !hamp !teamz !packup !doug !akw !nuki !neon !swk !ja")
-    await ctx.send("fun: !repair !country !proonz !angel !masz !seagals (1/4) !kix")
+    async with commandExecutionLock:
+        await ctx.send("pickup: !pickup !add !remove !teams !lockmap !cancel !playernumber")
+        await ctx.send("info: !stats !timeleft !hltv !logs !tfcmap !server")
+        await ctx.send("admin: !kick !lockset !forcestats !vote !forcefill !useNew !useOld")
+        await ctx.send("fun: !hamp !teamz !packup !doug !akw !nuki !neon !swk !ja")
+        await ctx.send("fun: !repair !country !proonz !angel !masz !seagals (1/4) !kix")
 
 @client.event
 async def on_ready():
