@@ -66,11 +66,10 @@ mapVoteMessageView = None
 nextCancelConfirms = False
 
 useNewServer = False
-# Global command lock.
-#
-# Every function decorated with @client.command must explicitly acquire this lock
-# using `async with commandExecutionLock:` so user commands execute serially.
-commandExecutionLock = asyncio.Lock()
+
+async def setup_global_lock(): 
+    global commandExecutionLock
+    commandExecutionLock = asyncio.Lock()
 
 class MapChoice:
     def __init__(self, mapName, decoration=None):
@@ -259,12 +258,18 @@ def getActiveServerPassword():
 @client.command(pass_context=True)
 @commands.has_role('admin')
 async def useNew(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         await setActiveServer(ctx, True)
 
 @client.command(pass_context=True)
 @commands.has_role('admin')
 async def useOld(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         await setActiveServer(ctx, False)
 
@@ -280,6 +285,9 @@ async def pickup(ctx):
     global nextCancelConfirms
     global useNewServer
 
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         if ctx.prefix == "nice ":
             await addInternal(ctx)
@@ -314,6 +322,9 @@ async def cancel(ctx):
     global mapVoteMessage
     global nextCancelConfirms
 
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         if mapVote != False and not nextCancelConfirms:
             await ctx.send("You're still picking maps, still wanna cancel?")
@@ -334,6 +345,9 @@ async def cancel(ctx):
 async def playernumber(ctx, numPlayers: int):
     global playerNumber
 
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         if ctx.channel.name != CHANNEL_NAME:
             return
@@ -393,12 +407,18 @@ def GenerateMapVoteEmbed():
 
 @client.command(pass_context=True, name="+")
 async def plusPlus(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         if ctx.prefix == "+":
             await addInternal(ctx)
 
 @client.command(pass_context=True, name="-")
 async def minusMinus(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         if ctx.prefix == "-":
             await removeInternal(ctx)
@@ -451,6 +471,9 @@ async def addInternal(ctx):
 
 @client.command(pass_context=True)
 async def add(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         await addInternal(ctx)
 
@@ -461,6 +484,9 @@ async def idlecancel():
     global pickupActive
     global mapVote
 
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         if pickupActive == True and pickupStarted == True and mapVote == False:
             # check if 3 hours since last add
@@ -484,6 +510,9 @@ async def removeInternal(ctx):
 
 @client.command(pass_context=True)
 async def remove(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         await removeInternal(ctx)
 
@@ -492,6 +521,9 @@ async def remove(ctx):
 async def kick(ctx, player: discord.User):
     global playerList
 
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         if player is not None and player.id in playerList:
             del playerList[player.id]
@@ -500,6 +532,9 @@ async def kick(ctx, player: discord.User):
 
 @client.command(pass_context=True)
 async def teams(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         if ctx.channel.name != CHANNEL_NAME:
             return
@@ -537,6 +572,9 @@ async def lockmap(ctx):
     global recentlyPlayedMapsMsg
     global nextCancelConfirms
 
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         if ctx.channel.name != CHANNEL_NAME:
             return
@@ -608,6 +646,9 @@ async def vote(ctx):
     global playerList
     global mapChoices
 
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         if mapVote == True and ctx.channel.name == CHANNEL_NAME:
             playersVoted = [playerId for mapChoice in mapChoices for playerId in mapChoice.votes]
@@ -624,6 +665,9 @@ async def lockset(ctx, mapToLockset):
     global pickupActive
     global mapVote
 
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         if ctx.channel.name != CHANNEL_NAME:
             return
@@ -644,6 +688,9 @@ async def lockset(ctx, mapToLockset):
 async def timeleft(ctx):
     global useNewServer
 
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         if ctx.channel.name != CHANNEL_NAME:
             return
@@ -667,6 +714,9 @@ async def timeleft(ctx):
 
 @client.command(pass_context=True)
 async def stats(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         with open('prevlog.json', 'r') as f:
             prevlog = json.load(f)
@@ -675,6 +725,9 @@ async def stats(ctx):
 @client.command(pass_context=True)
 @commands.has_role('admin')
 async def forcestats(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         print("forcestats -- channel name" + ctx.channel.name)
         if ctx.channel.name == 'moderator-only':
@@ -713,6 +766,9 @@ async def forceFill(ctx):
     global nextCancelConfirms
     global recentlyPlayedMapsMsg
 
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         print('force-starting pickup')
         if ctx.channel.name != CHANNEL_NAME:
@@ -739,16 +795,25 @@ async def forceFill(ctx):
 
 @client.command(pass_context=True)
 async def hltv(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         await ctx.send("HLTV: http://inhouse.hampalyzer.com/hltv/")
 
 @client.command(pass_context=True)
 async def logs(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         await ctx.send("Logs: http://inhouse.site.nfoservers.com/akw/")
 
 @client.command(pass_context=True)
 async def tfcmap(ctx, map):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         map = map.lower()
         with urllib.request.urlopen(r"http://mrclan.com/tfcmaps/") as mapIndex:
@@ -761,71 +826,113 @@ async def tfcmap(ctx, map):
 
 @client.command(pass_context=True)
 async def server(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         await ctx.send("steam://connect/%s:27015/%s" % (getActiveServer(), getActiveServerPassword()))
 
 @client.command(pass_context=True)
 async def teamz(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         await ctx.send("```\nPlayers (8/8)\nnuki, nuki, nuki, nuki, nuki, nuki, nuki, nuki```")
 
 @client.command(pass_context=True)
 async def packup(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         await ctx.send("Where's that fucking Hampster?  I swear I'm gonna pack that rodent up... 🐹")
 
 @client.command(pass_context=True)
 async def doug(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         await ctx.send("Doug was a semi-professional Team Fortress Classic Player between 2000 and 2007 achieving co-leading The Cereal Killers to holding all three major league titles at the same time. Doug left gaming for almost a decade and now he's back, streaming old Team Fortress Classic and Fortnite games.")
 
 @client.command(pass_context=True)
 async def akw(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         await ctx.send("akw likes butts 🍑")
 
 @client.command(pass_context=True)
 async def hamp(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         await ctx.send("https://streamable.com/0328u")
 
 @client.command(pass_context=True)
 async def nuki(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         await ctx.send("https://clips.twitch.tv/PoorRefinedTurnipFreakinStinkin")
 
 @client.command(pass_context=True)
 async def repair(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         await ctx.send("https://www.twitch.tv/davjs/clip/ViscousPuzzledKoupreySmoocherZ")
 
 @client.command(pass_context=True)
 async def country(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         await ctx.send("http://hampalyzer.com/country-trolls-hump2.mp4")
 
 @client.command(pass_context=True)
 async def neon(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         await ctx.send("https://clips.twitch.tv/VenomousCrepuscularJuicePeanutButterJellyTime")
 
 @client.command(pass_context=True)
 async def proonz(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         await ctx.send("https://streamable.com/xugb7r")
 
 @client.command(pass_context=True)
 async def masz(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         await ctx.send("https://www.twitch.tv/neonlight_tfc/clip/BoldEnthusiasticFerretKevinTurtle-Wz33i-BA34JDjxVp")
 
 @client.command(pass_context=True)
 async def swk(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         await ctx.send("https://streamable.com/ut068u")
 
 @client.command(pass_context=True)
 async def seagals(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         clips = [
             "https://streamable.com/mt9hjy",
@@ -838,21 +945,33 @@ async def seagals(ctx):
 
 @client.command(pass_context=True)
 async def angel(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         await ctx.send("https://www.twitch.tv/nugki/clip/BlindingPatientPotPeteZaroll")
 
 @client.command(pass_context=True)
 async def ja(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         await ctx.send("https://www.twitch.tv/bananahampster/clip/DependableSpineyTruffleBIRB")
 
 @client.command(pass_context=True)
 async def kix(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         await ctx.send("https://www.twitch.tv/r0flz/clip/UglyGrotesqueCattlePraiseIt")
 
 @client.command(pass_context=True)
 async def help(ctx):
+    global commandExecutionLock
+    if commandExecutionLock is None:
+        await setup_global_lock()
     async with commandExecutionLock:
         await ctx.send("pickup: !pickup !add !remove !teams !lockmap !cancel !playernumber")
         await ctx.send("info: !stats !timeleft !hltv !logs !tfcmap !server")
