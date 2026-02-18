@@ -70,6 +70,19 @@ useNewServer = False
 ## lock commands that matter for being out of order
 commandLock = asyncio.Lock()
 
+## debounce printPlayerList so rapid !add commands only print once
+_printDebounceTask = None
+
+async def _debouncedPrintCoro(ctx):
+    await asyncio.sleep(1)
+    await printPlayerList(ctx)
+
+def debouncedPrintPlayerList(ctx):
+    global _printDebounceTask
+    if _printDebounceTask is not None:
+        _printDebounceTask.cancel()
+    _printDebounceTask = asyncio.create_task(_debouncedPrintCoro(ctx))
+
 class MapChoice:
     def __init__(self, mapName, decoration=None):
         self.mapName = mapName
@@ -421,7 +434,7 @@ async def add(ctx):
                     lastAddCtx = ctx
 
                 if len(playerList) < playerNumber:
-                    await printPlayerList(ctx)
+                    debouncedPrintPlayerList(ctx)
                 else:
                     pickupActive = False
                     if idlecancel.is_running():
