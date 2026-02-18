@@ -67,6 +67,9 @@ nextCancelConfirms = False
 
 useNewServer = False
 
+## lock commands that matter for being out of order
+commandLock = asyncio.Lock()
+
 class MapChoice:
     def __init__(self, mapName, decoration=None):
         self.mapName = mapName
@@ -273,30 +276,31 @@ async def pickup(ctx):
     global nextCancelConfirms
     global useNewServer
 
-    if ctx.prefix == "nice ":
-        await add(ctx)
-        return
+    async with commandLock: 
+        if ctx.prefix == "nice ":
+            await add(ctx)
+            return
 
-    if pickupStarted == False and pickupActive == False and mapVote == False and ctx.channel.name == CHANNEL_NAME:
-        resetMaps()
-        await DePopulatePickup(ctx)
+        if pickupStarted == False and pickupActive == False and mapVote == False and ctx.channel.name == CHANNEL_NAME:
+            resetMaps()
+            await DePopulatePickup(ctx)
 
-        pickupStarted = True
-        nextCancelConfirms = False
-        recentlyPlayedMapsMsg = "Maps %s were recently played and are removed from voting." % ", ".join(previousMaps)
+            pickupStarted = True
+            nextCancelConfirms = False
+            recentlyPlayedMapsMsg = "Maps %s were recently played and are removed from voting." % ", ".join(previousMaps)
 
-        await ctx.send("Pickup started on %s server. !add in 10 seconds" % ("new Vultur" if useNewServer else "old NFO"))
-        await updateNick(ctx, "starting...")
-        await asyncio.sleep(5)
-        await ctx.send("!add in 5 seconds")
-        await asyncio.sleep(5)
+            await ctx.send("Pickup started on %s server. !add in 10 seconds" % ("new Vultur" if useNewServer else "old NFO"))
+            await updateNick(ctx, "starting...")
+            await asyncio.sleep(5)
+            await ctx.send("!add in 5 seconds")
+            await asyncio.sleep(5)
 
-        if pickupStarted == True:
-            pickupActive = True
-            await ctx.send("!add enabled")
-            await printPlayerList(ctx)
-        else:
-            await ctx.send("Pickup was canceled before countdown finished 🤨")
+            if pickupStarted == True:
+                pickupActive = True
+                await ctx.send("!add enabled")
+                await printPlayerList(ctx)
+            else:
+                await ctx.send("Pickup was canceled before countdown finished 🤨")
 
 @client.command(pass_context=True)
 async def cancel(ctx):
@@ -306,20 +310,21 @@ async def cancel(ctx):
     global mapVoteMessage
     global nextCancelConfirms
 
-    if mapVote != False and not nextCancelConfirms:
-        await ctx.send("You're still picking maps, still wanna cancel?")
-        nextCancelConfirms = True
-        return
-    if pickupStarted == True or pickupActive == True:
-        pickupStarted = False
-        pickupActive = False
-        if mapVoteMessage is not None:
-            await mapVoteMessage.edit(view=None)
-            mapVoteMessage = None
-        await ctx.send("Pickup canceled.")
-        await DePopulatePickup(ctx)
-    else:
-        await ctx.send("No pickup active.")
+    async with commandLock: 
+        if mapVote != False and not nextCancelConfirms:
+            await ctx.send("You're still picking maps, still wanna cancel?")
+            nextCancelConfirms = True
+            return
+        if pickupStarted == True or pickupActive == True:
+            pickupStarted = False
+            pickupActive = False
+            if mapVoteMessage is not None:
+                await mapVoteMessage.edit(view=None)
+                mapVoteMessage = None
+            await ctx.send("Pickup canceled.")
+            await DePopulatePickup(ctx)
+        else:
+            await ctx.send("No pickup active.")
 
 @client.command(pass_context=True)
 async def playernumber(ctx, numPlayers: int):
@@ -402,41 +407,42 @@ async def add(ctx):
     global mapChoices
 
     player = ctx.author
+    
+    async with commandLock: 
+        if pickupActive == True and ctx.channel.name == CHANNEL_NAME:
+            playerId = player.id
+            playerName = player.display_name
+            if playerId not in playerList:
+                playerList[playerId] = playerName
+                lastAdd = datetime.datetime.utcnow()
 
-    if pickupActive == True and ctx.channel.name == CHANNEL_NAME:
-        playerId = player.id
-        playerName = player.display_name
-        if playerId not in playerList:
-            playerList[playerId] = playerName
-            lastAdd = datetime.datetime.utcnow()
+                if not idlecancel.is_running():
+                    idlecancel.start()
+                    lastAddCtx = ctx
 
-            if not idlecancel.is_running():
-                idlecancel.start()
-                lastAddCtx = ctx
+                if len(playerList) < playerNumber:
+                    await printPlayerList(ctx)
+                else:
+                    pickupActive = False
+                    if idlecancel.is_running():
+                        idlecancel.stop()
 
-            if len(playerList) < playerNumber:
-                await printPlayerList(ctx)
-            else:
-                pickupActive = False
-                if idlecancel.is_running():
-                    idlecancel.stop()
+                    await printPlayerList(ctx)
+                    await updateNick(ctx, "voting...")
 
-                await printPlayerList(ctx)
-                await updateNick(ctx, "voting...")
+                    # ensure that playerlist is first n people added
+                    playerList = dict(list(playerList.items())[:playerNumber])
 
-                # ensure that playerlist is first n people added
-                playerList = dict(list(playerList.items())[:playerNumber])
+                    PickMaps(True)
+                    mapChoices.append(MapChoice("New Maps"))
 
-                PickMaps(True)
-                mapChoices.append(MapChoice("New Maps"))
+                    mapVote = True
+                    await sendMapEmbed(ctx)
 
-                mapVote = True
-                await sendMapEmbed(ctx)
-
-                mentionString = ""
-                for playerId in playerList.keys():
-                    mentionString = mentionString + ("<@%s> " % playerId)
-                await ctx.send(mentionString)
+                    mentionString = ""
+                    for playerId in playerList.keys():
+                        mentionString = mentionString + ("<@%s> " % playerId)
+                    await ctx.send(mentionString)
 
 @tasks.loop(minutes=30)
 async def idlecancel():
@@ -461,20 +467,22 @@ async def remove(ctx):
     global playerList
     global pickupActive
 
-    if pickupActive == True and ctx.channel.name == CHANNEL_NAME:
-        if ctx.author.id in playerList:
-            del playerList[ctx.author.id]
-            await printPlayerList(ctx)
+    async with commandLock: 
+        if pickupActive == True and ctx.channel.name == CHANNEL_NAME:
+            if ctx.author.id in playerList:
+                del playerList[ctx.author.id]
+                await printPlayerList(ctx)
 
 @client.command(pass_context=True)
 @commands.has_role('admin')
 async def kick(ctx, player: discord.User):
     global playerList
 
-    if player is not None and player.id in playerList:
-        del playerList[player.id]
-        await ctx.send("Kicked %s from the pickup." % player.mention)
-        await printPlayerList(ctx)
+    async with commandLock: 
+        if player is not None and player.id in playerList:
+            del playerList[player.id]
+            await ctx.send("Kicked %s from the pickup." % player.mention)
+            await printPlayerList(ctx)
 
 @client.command(pass_context=True)
 async def teams(ctx):
@@ -517,66 +525,67 @@ async def lockmap(ctx):
     if ctx.channel.name != CHANNEL_NAME:
         return
 
-    rankedVotes = []
-    highestVote = 0
-    winningMap = " "
+    async with commandLock: 
+        rankedVotes = []
+        highestVote = 0
+        winningMap = " "
 
-    if(mapVote == True):
-        nextCancelConfirms = False
+        if(mapVote == True):
+            nextCancelConfirms = False
 
-        # get top maps
-        mapTally = [(mapChoice.mapName, len(mapChoice.votes)) for mapChoice in mapChoices]
-        rankedVotes = sorted(mapTally, key=lambda e: e[1], reverse=True)
+            # get top maps
+            mapTally = [(mapChoice.mapName, len(mapChoice.votes)) for mapChoice in mapChoices]
+            rankedVotes = sorted(mapTally, key=lambda e: e[1], reverse=True)
 
-        print(rankedVotes)
+            print(rankedVotes)
 
-        if len(rankedVotes) == 0:
-            await ctx.send("Failed to determine votes correctly, resetting...")
+            if len(rankedVotes) == 0:
+                await ctx.send("Failed to determine votes correctly, resetting...")
 
-            resetMaps()
-            PickMaps(True)
-            mapChoices.append(MapChoice("New Maps"))
+                resetMaps()
+                PickMaps(True)
+                mapChoices.append(MapChoice("New Maps"))
 
-            await sendMapEmbed(ctx)
-            return
+                await sendMapEmbed(ctx)
+                return
 
-        highestVote = rankedVotes[0][1]
+            highestVote = rankedVotes[0][1]
 
-        # don't allow lockmap if no votes were cast
-        if highestVote == 0:
-            await ctx.send("!lockmap denied; no votes were cast.")
-            return
+            # don't allow lockmap if no votes were cast
+            if highestVote == 0:
+                await ctx.send("!lockmap denied; no votes were cast.")
+                return
 
-        # Hide voting buttons now that the vote is complete.
-        mapVoteMessageView = None
-        await mapVoteMessage.edit(view=None)
-
-        winningMaps = [pickedMap for (pickedMap, votes) in rankedVotes if votes == highestVote]
-
-        # don't allow "New Maps" to win
-        if len(winningMaps) > 1 and "New Maps" in winningMaps:
-            winningMap = "New Maps"
-        else:
-            winningMap = random.choice(winningMaps)
-
-        if(winningMap == "New Maps"):
-            PickMaps()
-            carryOverMap = random.choice([pickedMap for (pickedMap, votes) in rankedVotes if votes == rankedVotes[1][1] and pickedMap != "New Maps"])
-            mapChoices.append(MapChoice(carryOverMap, "🔁"))
-
-            recentlyPlayedMapsMsg = None
-            await sendMapEmbed(ctx)
-        else:
-            mapVoteMessage = None
+            # Hide voting buttons now that the vote is complete.
             mapVoteMessageView = None
+            await mapVoteMessage.edit(view=None)
 
-            mapVote = False
-            RecordMapAndTeams(winningMap)
+            winningMaps = [pickedMap for (pickedMap, votes) in rankedVotes if votes == highestVote]
 
-            await ctx.send("The winning map is: " + winningMap)
-            await ctx.send("🎉🎉 JOIN INHOUSE YA HOSERS 🎉🎉")
-            await ctx.send("steam://connect/%s:27015/%s" % (getActiveServer(), getActiveServerPassword()))
-            await DePopulatePickup(ctx)
+            # don't allow "New Maps" to win
+            if len(winningMaps) > 1 and "New Maps" in winningMaps:
+                winningMap = "New Maps"
+            else:
+                winningMap = random.choice(winningMaps)
+
+            if(winningMap == "New Maps"):
+                PickMaps()
+                carryOverMap = random.choice([pickedMap for (pickedMap, votes) in rankedVotes if votes == rankedVotes[1][1] and pickedMap != "New Maps"])
+                mapChoices.append(MapChoice(carryOverMap, "🔁"))
+
+                recentlyPlayedMapsMsg = None
+                await sendMapEmbed(ctx)
+            else:
+                mapVoteMessage = None
+                mapVoteMessageView = None
+
+                mapVote = False
+                RecordMapAndTeams(winningMap)
+
+                await ctx.send("The winning map is: " + winningMap)
+                await ctx.send("🎉🎉 JOIN INHOUSE YA HOSERS 🎉🎉")
+                await ctx.send("steam://connect/%s:27015/%s" % (getActiveServer(), getActiveServerPassword()))
+                await DePopulatePickup(ctx)
 
 @client.command(pass_context=True)
 async def vote(ctx):
@@ -602,17 +611,18 @@ async def lockset(ctx, mapToLockset):
     if ctx.channel.name != CHANNEL_NAME:
         return
 
-    if pickupActive != False and mapVote != False:
-        await ctx.send("Error: can only !lockset during map voting or if no pickup is active (changes the map for the last pickup)")
-        return
+    async with commandLock: 
+        if pickupActive != False and mapVote != False:
+            await ctx.send("Error: can only !lockset during map voting or if no pickup is active (changes the map for the last pickup)")
+            return
 
-    previousMaps.pop()
-    previousMaps.append(mapToLockset)
+        previousMaps.pop()
+        previousMaps.append(mapToLockset)
 
-    with open('prevmaps.json', 'w') as f:
-        json.dump(list(previousMaps), f)
+        with open('prevmaps.json', 'w') as f:
+            json.dump(list(previousMaps), f)
 
-    await ctx.send("Set pickup map to %s" % mapToLockset)
+        await ctx.send("Set pickup map to %s" % mapToLockset)
 
 @client.command(pass_context=True)
 async def timeleft(ctx):
