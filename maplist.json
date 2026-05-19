@@ -11,7 +11,6 @@
     "tier2": [
         "alchimy_lg2",
         "mortality_lg",
-        "myth_mesa_v4c",
         "openfire_lowgrens",
         "opposed_b6",
         "piggie_b3",
@@ -19,12 +18,16 @@
         "siege",
         "stormz2_lg",
         "stowaway2_lg2",
-        "toasted_b16"
+        "toasted_b16",
+        "viridian_b10",
+        "massive2_b7"
     ],
     "tier3": [
         "2kfort5_lg",
         "ameliorate",
         "turbowave_b3",
-        "voltage_lg"
+        "voltage_lg",
+        "castra_b5",
+        "myth_mesa_v4c"
     ]
 }
